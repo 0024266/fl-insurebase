@@ -32,40 +32,40 @@ function escapeXml(unsafe: string): string {
 }
 
 function generateSitemapAndNoscript() {
-  const baseUrl = 'https://menna.pro/agencydirectoryportal/';
+  const baseUrl = (process.env.SITE_URL || 'https://fl-insurebase.info-dir.workers.dev').replace(/\/$/, '');
   const today = new Date().toISOString().split('T')[0];
 
   const urls: string[] = [];
 
   // Base URLs
   urls.push(`  <url>
-    <loc>${baseUrl}</loc>
+    <loc>${baseUrl}/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>`);
 
   urls.push(`  <url>
-    <loc>${baseUrl}#tab=mortgages</loc>
+    <loc>${baseUrl}/mortgages</loc>
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>`);
 
   urls.push(`  <url>
-    <loc>${baseUrl}#tab=property</loc>
+    <loc>${baseUrl}/property</loc>
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`);
 
-  // Mortgage URLs
+  // Mortgage URLs (Clean Paths)
   for (const record of INITIAL_DATASET) {
     const id = getMortgageId(record);
     if (id) {
       const safeId = encodeURIComponent(id);
       urls.push(`  <url>
-    <loc>${baseUrl}#tab=mortgages&amp;id=${safeId}</loc>
+    <loc>${baseUrl}/mortgages/${safeId}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -73,13 +73,13 @@ function generateSitemapAndNoscript() {
     }
   }
 
-  // Permit / Property URLs
+  // Permit / Property URLs (Clean Paths)
   for (const record of INITIAL_FLORIDA_PERMIT_DATASET) {
     const id = getPermitId(record);
     if (id) {
       const safeId = encodeURIComponent(id);
       urls.push(`  <url>
-    <loc>${baseUrl}#tab=property&amp;id=${safeId}</loc>
+    <loc>${baseUrl}/property/${safeId}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -104,7 +104,7 @@ ${urls.join('\n')}
     console.log(`Generated dist/sitemap.xml with ${urls.length} URLs.`);
   }
 
-  // Generate crawler fallback <noscript> links for top 200 mortgage lenders & Florida counties
+  // Generate crawler fallback <noscript> links for top 200 mortgage lenders & Florida counties using clean paths
   const top200Mortgages = INITIAL_DATASET.slice(0, 200);
   const topMortgageLis = top200Mortgages.map((rec) => {
     const id = getMortgageId(rec);
@@ -112,7 +112,7 @@ ${urls.join('\n')}
     const city = escapeXml(rec.City || '');
     const state = escapeXml(rec.State || 'FL');
     const zip = escapeXml(rec.ZIP || '');
-    return `        <li><a href="#tab=mortgages&amp;id=${encodeURIComponent(id)}"><strong>${name}</strong> - ${city}, ${state} ${zip} Mortgagee Clause</a></li>`;
+    return `        <li><a href="/mortgages/${encodeURIComponent(id)}"><strong>${name}</strong> - ${city}, ${state} ${zip} Mortgagee Clause</a></li>`;
   }).join('\n');
 
   const permitLis = INITIAL_FLORIDA_PERMIT_DATASET.map((rec) => {
@@ -120,7 +120,7 @@ ${urls.join('\n')}
     const city = escapeXml(rec.City || 'Florida Jurisdiction');
     const county = escapeXml(rec.County || '');
     const zip = escapeXml(String(rec.zip || ''));
-    return `        <li><a href="#tab=property&amp;id=${encodeURIComponent(id)}"><strong>${city}</strong> (${county} County, FL ${zip}) Property Appraiser &amp; Permits</a></li>`;
+    return `        <li><a href="/property/${encodeURIComponent(id)}"><strong>${city}</strong> (${county} County, FL ${zip}) Property Appraiser &amp; Permits</a></li>`;
   }).join('\n');
 
   const noscriptHtml = `    <!-- Static Crawler Pre-Rendering Fallback for SEO Indexing -->

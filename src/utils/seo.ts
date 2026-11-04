@@ -17,7 +17,10 @@ export function updateDynamicSeo(
   if (typeof document === 'undefined') return;
 
   const currentUrl = window.location.href;
-  const baseUrl = 'https://menna.pro/agencydirectoryportal';
+  const baseUrl =
+    typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : 'https://fl-insurebase.info-dir.workers.dev';
 
   // 1. Robots Meta Tag (Excludes Carriers tab from search indexing)
   let robotsMeta = document.getElementById('seo-robots-meta');

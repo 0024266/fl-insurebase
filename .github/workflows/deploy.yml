@@ -1,4 +1,4 @@
-name: Deploy FL InsureBase to Cloudflare Pages
+name: Deploy FL InsureBase to Cloudflare
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    name: Build SPA & Deploy to Cloudflare Pages
+    name: Build SPA & Deploy to Cloudflare Workers / Pages
 
     steps:
       - name: Checkout Source Code
@@ -31,11 +31,12 @@ jobs:
       - name: Build Application & Generate Sitemaps
         run: npm run build
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+      - name: Deploy to Cloudflare via Wrangler
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: 'fl-insurebase'
-          directory: 'dist'
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || 'bf43c2b79816dc1f5ce8a81cc7536ba6' }}
+          command: deploy

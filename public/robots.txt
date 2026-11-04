@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /carriers
+
+Sitemap: https://fl-insurebase.info-dir.workers.dev/sitemap.xml

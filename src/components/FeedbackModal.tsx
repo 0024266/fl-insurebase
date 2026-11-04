@@ -171,13 +171,13 @@ export function FeedbackModal({
 
   const handleSubmitOnGithub = () => {
     const issueTitle = `[FL InsureBase] Data Correction - ${entityName.trim() || 'General'}`;
-    const githubUrl = `https://github.com/mennapro/fl-insurebase/issues/new?title=${encodeURIComponent(
+    const githubUrl = `https://github.com/0024266/fl-insurebase/issues/new?title=${encodeURIComponent(
       issueTitle
     )}&body=${encodeURIComponent(body)}`;
     window.open(githubUrl, '_blank', 'noopener,noreferrer');
     onToast(
       'GitHub Issue Opened',
-      'Opening pre-filled GitHub Issue on mennapro/fl-insurebase repository',
+      'Opening pre-filled GitHub Issue on 0024266/fl-insurebase repository',
       'info'
     );
   };
