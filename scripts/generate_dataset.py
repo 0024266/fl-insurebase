@@ -1,0 +1,358 @@
+import json
+import os
+
+# We will read the list of records and write them into src/data/initialPermitRecords.ts
+# All records from user prompt with proper normalization
+data_str = """[
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068eb8a" },
+    "zip": 33018,
+    "City": "HIALEAH",
+    "County": "MIAMI-DADE",
+    "State": "FL",
+    "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
+    "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
+    "PermitByCity": "http://apps.hialeahfl.gov/building/",
+    "lat": 25.9098,
+    "long": -80.3889,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068eb8f" },
+    "zip": 33112,
+    "City": "MIAMI",
+    "County": "MIAMI-DADE",
+    "State": "FL",
+    "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
+    "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
+    "PermitByCity": "http://apps.miamigov.com/iBuildPortal",
+    "lat": 25.7964,
+    "long": -80.3849,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068eb9e" },
+    "zip": 33136,
+    "City": "MIAMI",
+    "County": "MIAMI-DADE",
+    "State": "FL",
+    "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
+    "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
+    "PermitByCity": "http://apps.miamigov.com/iBuildPortal",
+    "lat": 25.7864,
+    "long": -80.2042,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ebaf" },
+    "zip": 33167,
+    "City": "MIAMI",
+    "County": "MIAMI-DADE",
+    "State": "FL",
+    "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
+    "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
+    "PermitByCity": "http://apps.miamigov.com/iBuildPortal",
+    "lat": 25.8856,
+    "long": -80.2292,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ebd3" },
+    "zip": 33266,
+    "City": "MIAMI",
+    "County": "MIAMI-DADE",
+    "State": "FL",
+    "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
+    "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
+    "PermitByCity": "http://apps.miamigov.com/iBuildPortal",
+    "lat": 25.7743,
+    "long": -80.1937,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ebd4" },
+    "zip": 33269,
+    "City": "MIAMI",
+    "County": "MIAMI-DADE",
+    "State": "FL",
+    "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
+    "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
+    "PermitByCity": "http://apps.miamigov.com/iBuildPortal",
+    "lat": 25.7743,
+    "long": -80.1937,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ebdc" },
+    "zip": 33301,
+    "City": "FORT LAUDERDALE",
+    "County": "BROWARD",
+    "State": "FL",
+    "PAlink": "https://web.bcpa.net/BcpaClient/#/Record-Search",
+    "PermitByCounty": "https://dpepp.broward.org/BCS/Default.aspx?PossePresentation=ParcelSearchByAddress",
+    "PermitByCity": "https://aca-prod.accela.com/FTL/Cap/CapHome.aspx?ShowMyPermitList=Y&SearchType=ByPermit&module=Permits",
+    "lat": 26.1216,
+    "long": -80.1288,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ebdf" },
+    "zip": 33304,
+    "City": "FORT LAUDERDALE",
+    "County": "BROWARD",
+    "State": "FL",
+    "PAlink": "https://web.bcpa.net/BcpaClient/#/Record-Search",
+    "PermitByCounty": "https://dpepp.broward.org/BCS/Default.aspx?PossePresentation=ParcelSearchByAddress",
+    "PermitByCity": "https://aca-prod.accela.com/FTL/Cap/CapHome.aspx?ShowMyPermitList=Y&SearchType=ByPermit&module=Permits",
+    "lat": 26.1387,
+    "long": -80.1218,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ebe6" },
+    "zip": 33311,
+    "City": "FORT LAUDERDALE",
+    "County": "BROWARD",
+    "State": "FL",
+    "PAlink": "https://web.bcpa.net/BcpaClient/#/Record-Search",
+    "PermitByCounty": "https://dpepp.broward.org/BCS/Default.aspx?PossePresentation=ParcelSearchByAddress",
+    "PermitByCity": "https://aca-prod.accela.com/FTL/Cap/CapHome.aspx?ShowMyPermitList=Y&SearchType=ByPermit&module=Permits",
+    "lat": 26.1421,
+    "long": -80.1728,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ebe9" },
+    "zip": 33314,
+    "City": "FORT LAUDERDALE",
+    "County": "BROWARD",
+    "State": "FL",
+    "PAlink": "https://web.bcpa.net/BcpaClient/#/Record-Search",
+    "PermitByCounty": "https://dpepp.broward.org/BCS/Default.aspx?PossePresentation=ParcelSearchByAddress",
+    "PermitByCity": "https://aca-prod.accela.com/FTL/Cap/CapHome.aspx?ShowMyPermitList=Y&SearchType=ByPermit&module=Permits",
+    "lat": 26.0697,
+    "long": -80.2246,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ebec" },
+    "zip": 33317,
+    "City": "FORT LAUDERDALE",
+    "County": "BROWARD",
+    "State": "FL",
+    "PAlink": "https://web.bcpa.net/BcpaClient/#/Record-Search",
+    "PermitByCounty": "https://dpepp.broward.org/BCS/Default.aspx?PossePresentation=ParcelSearchByAddress",
+    "PermitByCity": "https://aca-prod.accela.com/FTL/Cap/CapHome.aspx?ShowMyPermitList=Y&SearchType=ByPermit&module=Permits",
+    "lat": 26.1122,
+    "long": -80.2264,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ebf8" },
+    "zip": 33329,
+    "City": "FORT LAUDERDALE",
+    "County": "BROWARD",
+    "State": "FL",
+    "PAlink": "https://web.bcpa.net/BcpaClient/#/Record-Search",
+    "PermitByCounty": "https://dpepp.broward.org/BCS/Default.aspx?PossePresentation=ParcelSearchByAddress",
+    "PermitByCity": "https://aca-prod.accela.com/FTL/Cap/CapHome.aspx?ShowMyPermitList=Y&SearchType=ByPermit&module=Permits",
+    "lat": 26.1223,
+    "long": -80.1434,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ec09" },
+    "zip": 33601,
+    "City": "TAMPA",
+    "County": "HILLSBOROUGH",
+    "State": "FL",
+    "PAlink": "https://gis.hcpafl.org/propertysearch/#/nav/Basic%20Search",
+    "PermitByCounty": "https://www.hillsboroughcounty.org/en/businesses/permits-and-records/permitting-tools/building-permit-documents-and-records",
+    "PermitByCity": "https://aca-prod.accela.com/Tampa/Welcome.aspx?TabName=Home&TabList=Home",
+    "lat": 27.9961,
+    "long": -82.582,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ec15" },
+    "zip": 33613,
+    "City": "TAMPA",
+    "County": "HILLSBOROUGH",
+    "State": "FL",
+    "PAlink": "https://gis.hcpafl.org/propertysearch/#/nav/Basic%20Search",
+    "PermitByCounty": "https://www.hillsboroughcounty.org/en/businesses/permits-and-records/permitting-tools/building-permit-documents-and-records",
+    "PermitByCity": "https://aca-prod.accela.com/Tampa/Welcome.aspx?TabName=Home&TabList=Home",
+    "lat": 28.0772,
+    "long": -82.4455,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ec3e" },
+    "zip": 33694,
+    "City": "TAMPA",
+    "County": "HILLSBOROUGH",
+    "State": "FL",
+    "PAlink": "https://gis.hcpafl.org/propertysearch/#/nav/Basic%20Search",
+    "PermitByCounty": "https://www.hillsboroughcounty.org/en/businesses/permits-and-records/permitting-tools/building-permit-documents-and-records",
+    "PermitByCity": "https://aca-prod.accela.com/Tampa/Welcome.aspx?TabName=Home&TabList=Home",
+    "lat": 27.872,
+    "long": -82.4388,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ec96" },
+    "zip": 32716,
+    "City": "Altamonte Springs",
+    "County": "Seminole",
+    "State": "FL",
+    "PAlink": "https://altamontefl-energovpub.tylerhost.net/Apps/SelfService#/search",
+    "PermitByCounty": "https://semc-egov.aspgov.com/Click2GovBP/selectpermit.html",
+    "PermitByCity": "https://altamontefl-energovpub.tylerhost.net/Apps/SelfService#/search",
+    "lat": 28.66,
+    "long": -81.39,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ecac" },
+    "zip": 33433,
+    "City": "BOCA RATON",
+    "County": "PALM BEACH",
+    "State": "FL",
+    "PAlink": "https://www.pbcgov.org/papa/index.htm",
+    "PermitByCounty": "https://www.pbcgov.org/ePZB.Admin.WebSPA/#/Container/Permits_Inspections",
+    "PermitByCity": "https://boca-egov.aspgov.com/Click2GovBP/selectpermit.html?OWASP_CSRFTOKEN=1HDG-YW59-M1PI-O2LI-8RDB-YNL3-8S6R-ETW1&initialSearchView=true",
+    "lat": 26.3464,
+    "long": -80.1564,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ecba" },
+    "zip": 32712,
+    "City": "APOPKA",
+    "County": "ORANGE",
+    "State": "FL",
+    "PAlink": "https://ocpaweb.ocpafl.org/parcelsearch",
+    "PermitByCounty": "https://fasttrack.ocfl.net/OnlineServices/permit-building.aspx",
+    "PermitByCity": "https://broker.edmundsassoc.com/CPSS/?municipalId=APKAFL",
+    "lat": 28.712,
+    "long": -81.5136,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ecbf" },
+    "zip": 32464,
+    "City": "Westville",
+    "County": "Holmes",
+    "State": "FL",
+    "PAlink": "https://bsaonline.com/CD_PermitAjaxApplication/ApplyForPermit?applicationGuid=10d35eb5-f676-48b6-aea2-3502494c3df9&amp;propertyGuid=0&amp;projectGuid=0&amp;uid=2531",
+    "PermitByCounty": null,
+    "PermitByCity": "https://bsaonline.com/CD_PermitAjaxApplication/ApplyForPermit?applicationGuid=10d35eb5-f676-48b6-aea2-3502494c3df9&amp;propertyGuid=0&amp;projectGuid=0&amp;uid=2531",
+    "lat": 30.76,
+    "long": -85.84,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ed0a" },
+    "zip": 33425,
+    "City": "BOYNTON BEACH",
+    "County": "PALM BEACH",
+    "State": "FL",
+    "PAlink": "https://www.pbcgov.org/papa/index.htm",
+    "PermitByCounty": "https://www.pbcgov.org/ePZB.Admin.WebSPA/#/Container/Permits_Inspections",
+    "PermitByCity": "https://byb2-egov.aspgov.com/Click2GovBP/selectpermit.html",
+    "lat": 26.5253,
+    "long": -80.0664,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ed0b" },
+    "zip": 33426,
+    "City": "BOYNTON BEACH",
+    "County": "PALM BEACH",
+    "State": "FL",
+    "PAlink": "https://www.pbcgov.org/papa/index.htm",
+    "PermitByCounty": "https://www.pbcgov.org/ePZB.Admin.WebSPA/#/Container/Permits_Inspections",
+    "PermitByCity": "https://byb2-egov.aspgov.com/Click2GovBP/selectpermit.html",
+    "lat": 26.5175,
+    "long": -80.0834,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ed29" },
+    "zip": 33160,
+    "City": "SUNNY ISLES BEACH",
+    "County": "MIAMI-DADE",
+    "State": "FL",
+    "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
+    "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
+    "PermitByCity": "https://ci-sunnyislesbeach-fl.smartgovcommunity.com/ApplicationPublic/ApplicationHome",
+    "lat": 25.9449,
+    "long": -80.1391,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ed35" },
+    "zip": 32764,
+    "City": "DELTONA",
+    "County": "VOLUSIA",
+    "State": "FL",
+    "PAlink": "https://vcpa.vcgov.org/#gsc.tab=0",
+    "PermitByCounty": "https://growthmgt.vcgov.org/PublicPortal/Volusia/public/property_query.jsp",
+    "PermitByCity": "https://deltonafl-energovweb.tylerhost.net/apps/SelfService#/search",
+    "lat": 28.8426,
+    "long": -81.1562,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ed4f" },
+    "zip": 33326,
+    "City": "SUNRISE",
+    "County": "BROWARD",
+    "State": "FL",
+    "PAlink": "https://web.bcpa.net/BcpaClient/#/Record-Search",
+    "PermitByCounty": "https://dpepp.broward.org/BCS/Default.aspx?PossePresentation=ParcelSearchByAddress",
+    "PermitByCity": "https://energov.sunrisefl.gov/EnerGov_Prod/SelfService/SunriseFL%20Prod#/search?category=permits",
+    "lat": 26.1158,
+    "long": -80.3681,
+    "Terrain": "C"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ed5a" },
+    "zip": 32789,
+    "City": "WINTER PARK",
+    "County": "ORANGE",
+    "State": "FL",
+    "PAlink": "https://ocpaweb.ocpafl.org/parcelsearch",
+    "PermitByCounty": "https://fasttrack.ocfl.net/OnlineServices/permit-building.aspx",
+    "PermitByCity": "https://epay.cityofwinterpark.org/Click2GovBP/selectpermit.html",
+    "lat": 28.5978,
+    "long": -81.3534,
+    "Terrain": "B"
+  },
+  {
+    "_id": { "$oid": "687d549fba6d0f6d7068ed6e" },
+    "zip": 33415,
+    "City": "GREENACRES",
+    "County": "PALM BEACH",
+    "State": "FL",
+    "PAlink": "https://www.pbcgov.org/papa/index.htm",
+    "PermitByCounty": "https://www.pbcgov.org/ePZB.Admin.WebSPA/#/Container/Permits_Inspections",
+    "PermitByCity": "https://esuite.greenacresfl.gov/eSuite.permits/WelcomePage.aspx",
+    "lat": 26.656,
+    "long": -80.126,
+    "Terrain": "B"
+  }
+]"""
+
+parsed = json.loads(data_str)
+
+# Write formatted TypeScript dataset
+out_ts = '''import { FloridaZipRecord } from '../types/permits';
+
+export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = ''' + json.dumps(parsed, indent=2) + ''';
+'''
+
+with open('/src/data/initialPermitRecords.ts', 'w') as f:
+    f.write(out_ts)
+
+print("Saved", len(parsed), "records to initialPermitRecords.ts")

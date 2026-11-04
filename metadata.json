@@ -1,0 +1,6 @@
+{
+  "name": "FL InsureBase",
+  "description": "Florida insurance agent operational directory for mortgagee loss payees, property folios, and carrier payment portals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

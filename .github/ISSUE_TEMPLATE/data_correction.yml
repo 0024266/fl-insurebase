@@ -1,0 +1,44 @@
+name: Data Correction & Addition Request
+description: Submit a mortgagee clause update, property appraiser correction, or carrier portal rule detail.
+title: "[Data Update]: "
+labels: ["data-correction", "triage"]
+body:
+  - type: dropdown
+    id: entry_type
+    attributes:
+      label: Entry Type
+      description: What type of record is being updated or added?
+      options:
+        - Mortgagee / Loss Payee Record
+        - Florida Property / Permit Record
+        - Insurance Carrier Record
+        - General Suggestion
+    validations:
+      required: true
+
+  - type: input
+    id: entity_name
+    attributes:
+      label: Entity / Jurisdiction Name
+      description: Enter the official lender name, city/county jurisdiction, or carrier.
+      placeholder: "e.g., JPMorgan Chase Bank, N.A. or Miami-Dade County"
+    validations:
+      required: true
+
+  - type: textarea
+    id: corrected_clause
+    attributes:
+      label: Corrected ISAOA Clause / Folio Link / Portal Details
+      description: Provide the complete ISAOA/ATIMA clause, mailing address, servicing phone/fax, or permit portal URL.
+      placeholder: "Paste or type updated clause details here..."
+    validations:
+      required: true
+
+  - type: input
+    id: submitter_agency
+    attributes:
+      label: Submitting Agent / Agency Name
+      description: Optional submitter contact or agency name.
+      placeholder: "e.g., Jane Smith, FL InsureBase Partner Agency"
+    validations:
+      required: false
