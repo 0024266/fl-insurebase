@@ -15,19 +15,22 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
-  Download
+  Download,
+  MessageSquarePlus
 } from 'lucide-react';
 import { MortgageRecord } from '../types/mortgage';
 import {
   getRecordId,
   HighlightedText,
   sanitizeUrl,
-  cleanPhoneUri
+  cleanPhoneUri,
+  isAutoOrLossPayee
 } from '../utils/formatters';
 import { downloadVCard, exportMortgageesCsv } from '../utils/vcard';
 import { useLanguage } from '../context/LanguageContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { getShareableUrl } from '../utils/urlState';
+import { CopyableContact } from './CopyableContact';
 
 interface MortgageListProps {
   records: MortgageRecord[];
@@ -40,6 +43,7 @@ interface MortgageListProps {
   onDuplicate?: (record: MortgageRecord) => void;
   onDelete?: (id: string) => void;
   onEmailDocs?: (record: MortgageRecord) => void;
+  onSuggestCorrection?: (record: MortgageRecord) => void;
 }
 
 export function MortgageList({
@@ -52,10 +56,11 @@ export function MortgageList({
   onEdit,
   onDuplicate,
   onDelete,
-  onEmailDocs
+  onEmailDocs,
+  onSuggestCorrection
 }: MortgageListProps) {
   const { isSpanish } = useLanguage();
-  const { viewMode, setViewMode } = usePreferences();
+  const { viewMode, setViewMode, compactView } = usePreferences();
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(50);
 
@@ -170,9 +175,9 @@ export function MortgageList({
             const id = getRecordId(record);
             const isSelected = id === selectedId;
             const primaryPhone = record.Telephone || record.Telephone2;
-            const hasFax = Boolean(record.FAX && record.FAX.trim());
             const hasPortal = Boolean(record.Online && record.Online.trim());
             const hasEmail = Boolean(record.email && record.email.trim());
+            const isAuto = isAutoOrLossPayee(record);
             const fullAddress = [
               record.Address,
               [record.City, record.State, record.ZIP].filter(Boolean).join(' ')
@@ -189,15 +194,27 @@ export function MortgageList({
                 }`}
               >
                 <div>
-                  <div className="min-w-0">
-                    <h3 className="font-normal text-[14px] text-[#286090] hover:underline leading-tight">
-                      <HighlightedText text={record.Name || 'Unnamed Entity'} query={searchQuery} />
-                    </h3>
-                    {record.Name2 && (
-                      <p className="text-[12px] text-[#444444] mt-0.5 leading-snug">
-                        <HighlightedText text={record.Name2} query={searchQuery} />
-                      </p>
-                    )}
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-normal text-[14px] text-[#286090] hover:underline leading-tight">
+                        <HighlightedText text={record.Name || 'Unnamed Entity'} query={searchQuery} />
+                      </h3>
+                      {record.Name2 && (
+                        <p className="text-[12px] text-[#444444] mt-0.5 leading-snug">
+                          <HighlightedText text={record.Name2} query={searchQuery} />
+                        </p>
+                      )}
+                    </div>
+                    {/* Clause Badge */}
+                    <span
+                      className={`shrink-0 px-2 py-0.5 rounded-[2px] text-[10px] font-bold tracking-wide uppercase border ${
+                        isAuto
+                          ? 'bg-[#fff8e6] text-[#b45309] border-[#fde68a]'
+                          : 'bg-[#edf4ff] text-[#0052cc] border-[#b0d0ff]'
+                      }`}
+                    >
+                      {isAuto ? 'Auto / Loss Payee' : 'Mortgagee / ISAOA'}
+                    </span>
                   </div>
 
                   {/* Address */}
@@ -210,37 +227,21 @@ export function MortgageList({
                     </div>
                   )}
 
-                  {/* Phone & FAX */}
+                  {/* Phone & FAX with CopyableContact */}
                   <div className="mt-2.5 pt-2 border-t border-[#f0f0f0] grid grid-cols-2 gap-2 text-[12px]">
                     <div>
-                      <span className="text-[10.5px] text-[#777777] block font-semibold">Primary Phone</span>
-                      {primaryPhone ? (
-                        <a
-                          href={`tel:${cleanPhoneUri(primaryPhone)}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[#222222] hover:text-[#286090] hover:underline text-[12.5px]"
-                        >
-                          <HighlightedText text={primaryPhone} query={searchQuery} />
-                        </a>
-                      ) : (
-                        <span className="text-[#999999]">—</span>
-                      )}
+                      <span className="text-[10.5px] text-[#777777] block font-semibold mb-0.5">Primary Phone</span>
+                      <CopyableContact value={primaryPhone} type="phone" />
                     </div>
 
                     <div>
-                      <span className="text-[10.5px] text-[#777777] block font-semibold">FAX</span>
-                      {hasFax ? (
-                        <span className="text-[#222222] text-[12.5px]">
-                          <HighlightedText text={record.FAX!} query={searchQuery} />
-                        </span>
-                      ) : (
-                        <span className="text-[#999999]">—</span>
-                      )}
+                      <span className="text-[10.5px] text-[#777777] block font-semibold mb-0.5">FAX</span>
+                      <CopyableContact value={record.FAX} type="fax" />
                     </div>
                   </div>
                 </div>
 
-                {/* Card Action Buttons: Online Portal first, then Email, then View */}
+                {/* Card Action Buttons: Online Portal first, then Email, vCard, Suggest Edit, View */}
                 <div
                   className="mt-1 pt-2 border-t border-[#e5e5e5] flex flex-wrap items-center gap-1.5"
                   onClick={(e) => e.stopPropagation()}
@@ -295,7 +296,23 @@ export function MortgageList({
                     <span>vCard</span>
                   </button>
 
-                  {/* 4. View Details */}
+                  {/* 4. Suggest Edit */}
+                  {onSuggestCorrection && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSuggestCorrection(record);
+                      }}
+                      className="qq-btn-secondary text-[11.5px] py-1 px-2 flex items-center gap-1 font-bold text-[#286090] cursor-pointer"
+                      title="Suggest edit or report data correction for this lender"
+                    >
+                      <MessageSquarePlus className="w-3.5 h-3.5 text-[#286090]" />
+                      <span>Suggest Edit</span>
+                    </button>
+                  )}
+
+                  {/* 5. View Details */}
                   <button
                     type="button"
                     onClick={() => onSelect(id)}
@@ -368,27 +385,27 @@ export function MortgageList({
 
               <thead>
                 <tr className="qq-table-head select-none border-b border-[#d5d5d5]">
-                  <th scope="col" className="px-4 py-2.5 w-[42%] text-[#222222] font-bold text-[12.5px]">
+                  <th scope="col" className={`${compactView ? 'px-3 py-1.5' : 'px-4 py-2.5'} w-[42%] text-[#222222] font-bold text-[12.5px]`}>
                     {isSpanish ? 'Contacto / Dirección' : 'Contact / Address'}
                   </th>
-                  <th scope="col" className="px-3 py-2.5 w-[28%] text-[#222222] font-bold text-[12.5px]">
+                  <th scope="col" className={`${compactView ? 'px-2.5 py-1.5' : 'px-3 py-2.5'} w-[28%] text-[#222222] font-bold text-[12.5px]`}>
                     {isSpanish ? 'Teléfono Principal & FAX' : 'Primary Phone & FAX'}
                   </th>
-                  <th scope="col" className="px-3 py-2.5 w-[30%] text-[#222222] font-bold text-[12.5px]">
+                  <th scope="col" className={`${compactView ? 'px-2.5 py-1.5' : 'px-3 py-2.5'} w-[30%] text-[#222222] font-bold text-[12.5px]`}>
                     {isSpanish ? 'Portal en Línea & Correo' : 'Online Portal & Email'}
                   </th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-[#e8e8e8] text-[12.5px]">
+              <tbody className={`divide-y divide-[#e8e8e8] ${compactView ? 'text-[12px]' : 'text-[12.5px]'}`}>
                 {paginatedRecords.map((record) => {
                   const id = getRecordId(record);
                   const isSelected = id === selectedId;
 
                   const primaryPhone = record.Telephone || record.Telephone2;
-                  const hasFax = Boolean(record.FAX && record.FAX.trim());
                   const hasPortal = Boolean(record.Online && record.Online.trim());
                   const hasEmail = Boolean(record.email && record.email.trim());
+                  const isAuto = isAutoOrLossPayee(record);
                   const fullAddress = [
                     record.Address,
                     [record.City, record.State, record.ZIP].filter(Boolean).join(' ')
@@ -405,11 +422,20 @@ export function MortgageList({
                       }`}
                     >
                       {/* Column 1: Contact Name & Address */}
-                      <td className="px-4 py-3 align-top">
+                      <td className={`${compactView ? 'px-3 py-1.5' : 'px-4 py-3'} align-top`}>
                         <div className="min-w-0 pr-2">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[#286090] group-hover:underline font-normal text-[13.5px] leading-snug">
                               <HighlightedText text={record.Name || 'Unnamed Entity'} query={searchQuery} />
+                            </span>
+                            <span
+                              className={`px-1.5 py-0.2 rounded-[2px] text-[9.5px] font-bold tracking-wide uppercase border ${
+                                isAuto
+                                  ? 'bg-[#fff8e6] text-[#b45309] border-[#fde68a]'
+                                  : 'bg-[#edf4ff] text-[#0052cc] border-[#b0d0ff]'
+                              }`}
+                            >
+                              {isAuto ? 'Auto / Loss Payee' : 'Mortgagee'}
                             </span>
                           </div>
 
@@ -430,7 +456,7 @@ export function MortgageList({
                           )}
 
                           {/* Quick Actions toolbar */}
-                          <div className="mt-1.5 flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="mt-1 flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={() => onSelect(id)}
@@ -450,6 +476,20 @@ export function MortgageList({
                               <Download className="w-3 h-3 text-[#0066c0]" />
                               <span>vCard</span>
                             </button>
+                            {onSuggestCorrection && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSuggestCorrection(record);
+                                }}
+                                className="text-[#286090] hover:underline text-[11px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                title="Suggest edit or report correction"
+                              >
+                                <MessageSquarePlus className="w-3 h-3 text-[#286090]" />
+                                <span>Suggest Edit</span>
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={(e) => handleShareRecord(e, record)}
@@ -504,37 +544,22 @@ export function MortgageList({
                         </div>
                       </td>
 
-                      {/* Column 2: Primary Phone & FAX */}
-                      <td className="px-3 py-3 align-top">
-                        <div className="space-y-0.5 min-w-0 pr-1">
-                          {primaryPhone ? (
-                            <div>
-                              <a
-                                href={`tel:${cleanPhoneUri(primaryPhone)}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-[#222222] hover:text-[#286090] hover:underline font-normal text-[13px] block"
-                              >
-                                <HighlightedText text={primaryPhone} query={searchQuery} />
-                              </a>
-                              <span className="text-[11px] text-[#777777] block">Main</span>
-                            </div>
-                          ) : (
-                            <div className="text-[12px] text-[#999999]">—</div>
-                          )}
-
-                          {hasFax && (
-                            <div className="pt-1">
-                              <span className="text-[#222222] text-[12px] block">
-                                <HighlightedText text={record.FAX!} query={searchQuery} />
-                              </span>
-                              <span className="text-[10.5px] text-[#777777] block">FAX</span>
-                            </div>
-                          )}
+                      {/* Column 2: Primary Phone & FAX with CopyableContact */}
+                      <td className={`${compactView ? 'px-2.5 py-1.5' : 'px-3 py-3'} align-top`}>
+                        <div className="space-y-1 min-w-0 pr-1">
+                          <div>
+                            <span className="text-[10px] text-[#777777] block font-semibold mb-0.5">Primary Phone</span>
+                            <CopyableContact value={primaryPhone} type="phone" />
+                          </div>
+                          <div className="pt-0.5">
+                            <span className="text-[10px] text-[#777777] block font-semibold mb-0.5">FAX</span>
+                            <CopyableContact value={record.FAX} type="fax" />
+                          </div>
                         </div>
                       </td>
 
                       {/* Column 3: Online Portal Button First, then Email Button */}
-                      <td className="px-3 py-3 align-top">
+                      <td className={`${compactView ? 'px-2.5 py-1.5' : 'px-3 py-3'} align-top`}>
                         <div className="flex flex-wrap items-center gap-2">
                           {/* 1. Online Portal Button First */}
                           {hasPortal ? (

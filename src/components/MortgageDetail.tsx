@@ -32,6 +32,8 @@ import {
 import { downloadVCard } from '../utils/vcard';
 import { openMailClient } from '../utils/obfuscation';
 import { useLanguage } from '../context/LanguageContext';
+import { copyToClipboard as copyToClipboardHelper } from '../utils/clipboard';
+import { CopyableContact } from './CopyableContact';
 
 interface MortgageDetailProps {
   record: MortgageRecord | null;
@@ -97,15 +99,14 @@ export function MortgageDetail({
 
   const copyToClipboard = async (text: string, key: string, label: string) => {
     if (!text || !text.trim()) return;
-    try {
-      await navigator.clipboard.writeText(text.trim());
+    const success = await copyToClipboardHelper(text.trim());
+    if (success) {
       setCopiedKey(key);
       onToast(isSpanish ? 'Copiado al Portapapeles' : 'Copied to Clipboard', label, 'success');
       setTimeout(() => {
         setCopiedKey(null);
       }, 2000);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
+    } else {
       onToast(isSpanish ? 'Error al Copiar' : 'Copy Failed', isSpanish ? 'No se pudo copiar' : 'Unable to copy to clipboard', 'error');
     }
   };
@@ -384,67 +385,32 @@ export function MortgageDetail({
             )}
           </div>
 
-          {/* B. PHONE & FAX (ABOVE EMAIL TEMPLATE AS REQUESTED) */}
+          {/* B. PHONE & FAX (WITH COPYABLE CONTACT INTERACTION) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {/* Phone */}
             <div className="p-2.5 bg-[#fafafa] border border-[#d8d8d8] rounded-[3px] flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="w-7 h-7 rounded bg-[#e8f4fd] border border-[#bde0fe] text-[#286090] flex items-center justify-center shrink-0">
                   <Phone className="w-3.5 h-3.5" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[10.5px] text-[#666] font-medium">{t('phone')}</p>
-                  {primaryPhone && primaryPhone.trim() ? (
-                    <a
-                      href={cleanPhoneUri(primaryPhone)}
-                      className="text-[12px] font-mono font-semibold text-[#286090] hover:underline truncate block select-all"
-                    >
-                      {primaryPhone}
-                    </a>
-                  ) : (
-                    <span className="text-[11.5px] text-[#999] italic">{t('noPhone')}</span>
-                  )}
+                  <CopyableContact value={primaryPhone} type="phone" />
                 </div>
               </div>
-              {primaryPhone && (
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(primaryPhone, 'phone_num', 'Phone Number')}
-                  className="p-1 text-[#666] hover:text-[#286090] rounded hover:bg-[#eef2f6] cursor-pointer"
-                  title="Copy phone"
-                >
-                  {copiedKey === 'phone_num' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-[#555]" />}
-                </button>
-              )}
             </div>
 
             {/* FAX */}
             <div className="p-2.5 bg-[#fafafa] border border-[#d8d8d8] rounded-[3px] flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="w-7 h-7 rounded bg-[#e8f4fd] border border-[#bde0fe] text-[#286090] flex items-center justify-center shrink-0">
                   <Printer className="w-3.5 h-3.5" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[10.5px] text-[#666] font-medium">{t('fax')}</p>
-                  {hasFax ? (
-                    <span className="text-[12px] font-mono font-semibold text-[#333] truncate block select-all">
-                      {record.FAX}
-                    </span>
-                  ) : (
-                    <span className="text-[11.5px] text-[#999] italic">{t('noFax')}</span>
-                  )}
+                  <CopyableContact value={record.FAX} type="fax" />
                 </div>
               </div>
-              {hasFax && (
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(record.FAX!, 'fax_num', 'FAX Number')}
-                  className="p-1 text-[#666] hover:text-[#286090] rounded hover:bg-[#eef2f6] cursor-pointer"
-                  title="Copy FAX"
-                >
-                  {copiedKey === 'fax_num' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-[#555]" />}
-                </button>
-              )}
             </div>
           </div>
         </div>

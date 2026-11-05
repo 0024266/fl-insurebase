@@ -4,6 +4,7 @@ import { INITIAL_DATASET } from '../data/initialRecords';
 import {
   getRecordId,
   isLossPayee,
+  isAutoOrLossPayee,
   isMortgagee,
   hasOnlinePortal,
   isRecentlyUpdated,
@@ -127,10 +128,13 @@ export function useMortgages() {
         }
 
         // Category filter
-        if (categoryFilter === 'mortgagee' && !isMortgagee(record)) {
+        if ((categoryFilter === 'mortgagee' || categoryFilter === 'mortgagees') && !isMortgagee(record)) {
           return false;
         }
         if (categoryFilter === 'loss_payee' && !isLossPayee(record)) {
+          return false;
+        }
+        if (categoryFilter === 'auto_loss_payee' && !isAutoOrLossPayee(record)) {
           return false;
         }
         if (categoryFilter === 'has_portal' && !hasOnlinePortal(record)) {

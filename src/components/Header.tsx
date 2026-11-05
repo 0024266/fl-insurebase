@@ -22,6 +22,7 @@ import {
 import { DirectoryMode } from '../types/permits';
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageSelector } from './LanguageSelector';
+import { Logo } from './Logo';
 
 interface HeaderProps {
   activeTab: DirectoryMode;
@@ -85,32 +86,8 @@ export function Header({
       <div className="max-w-[1850px] mx-auto px-3 sm:px-4 py-1.5 flex items-center justify-between gap-3">
         {/* Left Section: QQCatalyst Orange Logo & Top Navigation Links */}
         <div className="flex items-center gap-3 lg:gap-5 min-w-0">
-          {/* Brand Logo: Clean FL InsureBase mark */}
-          <div
-            onClick={() => onTabChange('mortgages')}
-            className="flex items-center gap-2 cursor-pointer select-none shrink-0 group"
-            title="FL InsureBase — Florida Agent Operations Hub"
-          >
-            {/* Signature Orange Geometric Shield Mark */}
-            <div className="flex items-center gap-2">
-              <div className="w-6.5 h-6.5 rounded-[3px] bg-gradient-to-br from-[#ef6c00] to-[#d84315] flex items-center justify-center text-white shadow-xs shrink-0">
-                <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-[17px] text-[#222222] tracking-tight leading-none font-sans group-hover:text-[#0066c0] transition-colors whitespace-nowrap">
-                    FL InsureBase
-                  </span>
-                  <span className="hidden xl:inline-block bg-[#0066c0]/10 text-[#0066c0] border border-[#0066c0]/20 text-[10px] font-semibold px-1.5 py-0.5 rounded-[3px] uppercase tracking-wider shrink-0">
-                    v2.5
-                  </span>
-                </div>
-                <span className="text-xs text-slate-400 font-normal tracking-tight leading-tight hidden sm:block mt-0.5 whitespace-nowrap">
-                  Florida Agent Operations Hub • Mortgagees • Folios • Carriers
-                </span>
-              </div>
-            </div>
-          </div>
+          {/* Brand Logo: Clean FL InsureBase vector emblem & lockup */}
+          <Logo onTabChange={onTabChange} />
 
           {/* Directory Navigation Links */}
           <nav className="hidden lg:flex items-center gap-2 text-xs font-sans shrink-0 whitespace-nowrap" aria-label="Directory Navigation">

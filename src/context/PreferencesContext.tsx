@@ -45,10 +45,30 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return { ...defaultPreferences, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          const validViewMode: ViewMode =
+            parsed.viewMode === 'table' || parsed.viewMode === 'cards' || parsed.viewMode === 'map'
+              ? parsed.viewMode
+              : defaultPreferences.viewMode;
+
+          const validFontSize: FontSize =
+            parsed.fontSize === 'normal' || parsed.fontSize === 'large' || parsed.fontSize === 'xl'
+              ? parsed.fontSize
+              : defaultPreferences.fontSize;
+
+          return {
+            showHelpBanners: typeof parsed.showHelpBanners === 'boolean' ? parsed.showHelpBanners : defaultPreferences.showHelpBanners,
+            showTooltips: typeof parsed.showTooltips === 'boolean' ? parsed.showTooltips : defaultPreferences.showTooltips,
+            enableShortcuts: typeof parsed.enableShortcuts === 'boolean' ? parsed.enableShortcuts : defaultPreferences.enableShortcuts,
+            compactView: typeof parsed.compactView === 'boolean' ? parsed.compactView : defaultPreferences.compactView,
+            viewMode: validViewMode,
+            fontSize: validFontSize
+          };
+        }
       }
     } catch {
-      // fallback
+      // fallback on JSON parse failure or storage restriction
     }
     return defaultPreferences;
   });

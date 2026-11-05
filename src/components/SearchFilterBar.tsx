@@ -6,7 +6,7 @@ import {
   RotateCcw,
   Info
 } from 'lucide-react';
-import { SortOption } from '../types/mortgage';
+import { SortOption, CategoryFilter } from '../types/mortgage';
 import { useLanguage } from '../context/LanguageContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { isExact5DigitZip } from '../utils/crossTabRouting';
@@ -14,6 +14,8 @@ import { isExact5DigitZip } from '../utils/crossTabRouting';
 interface SearchFilterBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  categoryFilter?: CategoryFilter;
+  onCategoryChange?: (category: CategoryFilter) => void;
   sortOption: SortOption;
   onSortChange: (sort: SortOption) => void;
   onDetectZip?: (zip: string) => void;
@@ -38,6 +40,8 @@ const PRESET_SEARCHES = [
 export function SearchFilterBar({
   searchQuery,
   onSearchChange,
+  categoryFilter = 'all',
+  onCategoryChange,
   sortOption,
   onSortChange,
   onDetectZip
@@ -65,8 +69,60 @@ export function SearchFilterBar({
     onSearchChange('');
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      handleClear();
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
   return (
     <div className="bg-white border border-[#d5d5d5] rounded-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-3 sm:p-4 mb-3 text-[#222222]">
+      {/* Category Segment Filter Pills */}
+      {onCategoryChange && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3 pb-2.5 border-b border-[#ebebeb]">
+          <span className="text-[#555555] font-bold text-[11.5px] mr-1 select-none">
+            {isSpanish ? 'Filtrar Tipo:' : 'Clause Type:'}
+          </span>
+          <button
+            type="button"
+            onClick={() => onCategoryChange('all')}
+            className={`px-2.5 py-1 rounded-[3px] text-[12px] font-semibold transition-all cursor-pointer border ${
+              categoryFilter === 'all'
+                ? 'bg-[#1b365d] text-white border-[#1b365d] shadow-2xs'
+                : 'bg-[#f4f6f8] text-[#444444] border-[#d0d7de] hover:bg-[#e8ecf0]'
+            }`}
+          >
+            {isSpanish ? 'Todos los Registros' : 'All Records'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onCategoryChange('mortgagees')}
+            className={`px-2.5 py-1 rounded-[3px] text-[12px] font-semibold transition-all cursor-pointer border flex items-center gap-1 ${
+              categoryFilter === 'mortgagees' || categoryFilter === 'mortgagee'
+                ? 'bg-[#0052cc] text-white border-[#0052cc] shadow-2xs'
+                : 'bg-[#edf4ff] text-[#0052cc] border-[#b0d0ff] hover:bg-[#dbe9ff]'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
+            {isSpanish ? 'Acreedores Hipotecarios (ISAOA / ATIMA)' : 'Mortgagees / ISAOA / ATIMA'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onCategoryChange('auto_loss_payee')}
+            className={`px-2.5 py-1 rounded-[3px] text-[12px] font-semibold transition-all cursor-pointer border flex items-center gap-1 ${
+              categoryFilter === 'auto_loss_payee'
+                ? 'bg-[#b45309] text-white border-[#b45309] shadow-2xs'
+                : 'bg-[#fff8e6] text-[#b45309] border-[#fde68a] hover:bg-[#fef3c7]'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+            {isSpanish ? 'Auto y Beneficiario de Pérdidas' : 'Auto & Loss Payee'}
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleGoClick} className="flex flex-col gap-2.5">
         {/* Main Controls Row: Enter Search Criteria Box + Clean Separate Sort Selector */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 justify-between">
@@ -95,6 +151,7 @@ export function SearchFilterBar({
                     }
                     onSearchChange(val);
                   }}
+                  onKeyDown={handleKeyDown}
                   placeholder={isSpanish ? 'Buscar Nombre, Póliza #, Teléfono ...' : 'Search Name, Policy #, Phone ...'}
                   className="w-full bg-white text-[#222222] text-[13px] border border-[#b0b0b0] border-r-0 pl-9 pr-14 py-1 rounded-l-[2px] focus:outline-hidden focus:border-[#286090] focus:ring-1 focus:ring-[#286090]/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] h-[32px] font-sans placeholder-[#888888]"
                 />

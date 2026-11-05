@@ -27,6 +27,8 @@ export function ViewSettingsBar({
     setViewMode,
     fontSize,
     setFontSize,
+    compactView,
+    setCompactView,
     showHelpBanners,
     toggleHelpBanners
   } = usePreferences();
@@ -112,6 +114,37 @@ export function ViewSettingsBar({
               title={isSpanish ? 'Fuente Grande (+20%)' : 'Large Font (+20%)'}
             >
               A+
+            </button>
+          </div>
+
+          {/* 3. Table Density Switcher (Compact vs Normal) */}
+          <div className="flex items-center bg-[#ffffff] border border-[#777] rounded-[2px] p-0.5 shadow-2xs">
+            <span className="px-1.5 text-[10.5px] text-[#555555] font-bold hidden sm:inline select-none">
+              {isSpanish ? 'Densidad:' : 'Density:'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCompactView(true)}
+              className={`px-2 py-0.5 rounded-[2px] font-bold text-[11px] transition-colors cursor-pointer ${
+                compactView
+                  ? 'bg-[#286090] text-white shadow-2xs'
+                  : 'text-[#333333] hover:bg-[#e8e8e8]'
+              }`}
+              title={isSpanish ? 'Vista Compacta (Filas reducidas)' : 'Compact View (Condensed padding)'}
+            >
+              {isSpanish ? 'Compacta' : 'Compact'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCompactView(false)}
+              className={`px-2 py-0.5 rounded-[2px] font-bold text-[11px] transition-colors cursor-pointer ${
+                !compactView
+                  ? 'bg-[#286090] text-white shadow-2xs'
+                  : 'text-[#333333] hover:bg-[#e8e8e8]'
+              }`}
+              title={isSpanish ? 'Vista Normal' : 'Normal View'}
+            >
+              {isSpanish ? 'Normal' : 'Normal'}
             </button>
           </div>
         </div>

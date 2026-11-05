@@ -138,6 +138,22 @@ function DirectoryApp() {
   const [feedbackInitialType, setFeedbackInitialType] = useState<SubmissionType>('correct_mortgage');
   const [feedbackInitialEntity, setFeedbackInitialEntity] = useState<string>('');
   const [feedbackInitialDetails, setFeedbackInitialDetails] = useState<string>('');
+  const [feedbackInitialRecordId, setFeedbackInitialRecordId] = useState<string>('');
+
+  const handleOpenFeedback = (
+    type?: SubmissionType,
+    entityName: string = '',
+    details: string = '',
+    recordId: string = ''
+  ) => {
+    const resolvedType: SubmissionType =
+      type || (activeTab === 'property' ? 'correct_permit' : 'correct_mortgage');
+    setFeedbackInitialType(resolvedType);
+    setFeedbackInitialEntity(entityName);
+    setFeedbackInitialDetails(details);
+    setFeedbackInitialRecordId(recordId);
+    setIsFeedbackModalOpen(true);
+  };
 
   // Deep link handler from URL hash on mount & hashchange
   useEffect(() => {
@@ -160,11 +176,35 @@ function DirectoryApp() {
       }
       if (urlState.id) {
         if (urlState.tab === 'property') {
+          const exists = permit.records.some((r) => getPermitRecordId(r) === urlState.id);
           permit.setSelectedId(urlState.id);
+          if (!exists && permit.records.length > 0) {
+            mortgage.addToast(
+              isSpanish ? 'Registro No Encontrado' : 'Property Record Not Found',
+              isSpanish ? `No se encontró el registro "${urlState.id}".` : `The requested property record ID "${urlState.id}" was not found.`,
+              'error'
+            );
+          }
         } else if (urlState.tab === 'carriers') {
+          const exists = carrier.records.some((r) => r.id === urlState.id);
           carrier.setSelectedId(urlState.id);
+          if (!exists && carrier.records.length > 0) {
+            mortgage.addToast(
+              isSpanish ? 'Aseguradora No Encontrada' : 'Carrier Not Found',
+              isSpanish ? `No se encontró la aseguradora "${urlState.id}".` : `The requested carrier record ID "${urlState.id}" was not found.`,
+              'error'
+            );
+          }
         } else {
+          const exists = mortgage.records.some((r) => getRecordId(r) === urlState.id);
           mortgage.setSelectedId(urlState.id);
+          if (!exists && mortgage.records.length > 0) {
+            mortgage.addToast(
+              isSpanish ? 'Prestamista No Encontrado' : 'Mortgagee Record Not Found',
+              isSpanish ? `No se encontró el acreedor "${urlState.id}".` : `The requested mortgagee record ID "${urlState.id}" was not found.`,
+              'error'
+            );
+          }
         }
       }
       if (urlState.view === 'detail' && urlState.id) {
@@ -459,19 +499,6 @@ function DirectoryApp() {
   const handleOpenEmailModal = (record: MortgageRecord) => {
     setEmailModalRecord(record);
     setIsEmailModalOpen(true);
-  };
-
-  const handleOpenFeedback = (
-    type?: SubmissionType,
-    entityName: string = '',
-    details: string = ''
-  ) => {
-    const resolvedType: SubmissionType =
-      type || (activeTab === 'property' ? 'correct_permit' : 'correct_mortgage');
-    setFeedbackInitialType(resolvedType);
-    setFeedbackInitialEntity(entityName);
-    setFeedbackInitialDetails(details);
-    setIsFeedbackModalOpen(true);
   };
 
   // Cross-Tab Smart Search & Auto-Routing Handlers
@@ -915,6 +942,8 @@ function DirectoryApp() {
             <SearchFilterBar
               searchQuery={mortgage.searchQuery}
               onSearchChange={mortgage.setSearchQuery}
+              categoryFilter={mortgage.categoryFilter}
+              onCategoryChange={mortgage.setCategoryFilter}
               sortOption={mortgage.sortOption}
               onSortChange={mortgage.setSortOption}
               stats={mortgage.stats}
@@ -934,6 +963,14 @@ function DirectoryApp() {
                 onDuplicate={handleDuplicateMortgageRecord}
                 onDelete={handleDeleteMortgageTrigger}
                 onEmailDocs={handleOpenEmailModal}
+                onSuggestCorrection={(rec) =>
+                  handleOpenFeedback(
+                    'correct_mortgage',
+                    rec.Name || '',
+                    buildMortgageeClause(rec),
+                    getRecordId(rec)
+                  )
+                }
                 onQuickCopy={(clause) =>
                   mortgage.addToast(
                     isSpanish ? 'Cláusula Hipotecaria Copiada' : 'Mortgagee Clause Copied',
@@ -1357,6 +1394,7 @@ function DirectoryApp() {
         onClose={() => setIsFeedbackModalOpen(false)}
         initialType={feedbackInitialType}
         initialEntityName={feedbackInitialEntity}
+        initialRecordId={feedbackInitialRecordId}
         initialDetails={feedbackInitialDetails}
         onToast={mortgage.addToast}
       />

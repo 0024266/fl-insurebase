@@ -188,7 +188,7 @@ export function cleanPhoneUri(phone: string | null | undefined): string {
 }
 
 /**
- * Checks if a record has Loss Payee characteristics
+ * Checks if a record has Loss Payee or Auto Finance / Leasing characteristics
  */
 export function isLossPayee(record: MortgageRecord): boolean {
   const text = `${record.Name || ''} ${record.Name2 || ''} ${record.Notes || ''}`.toLowerCase();
@@ -196,11 +196,37 @@ export function isLossPayee(record: MortgageRecord): boolean {
 }
 
 /**
- * Checks if a record is Mortgagee
+ * Checks if a record is Auto Finance, Leasing, or Auto Loss Payee
+ */
+export function isAutoOrLossPayee(record: MortgageRecord): boolean {
+  if (!record) return false;
+  const text = `${record.Name || ''} ${record.Name2 || ''} ${record.Notes || ''}`.toLowerCase();
+  return (
+    isLossPayee(record) ||
+    text.includes('auto') ||
+    text.includes('lease') ||
+    text.includes('leasing') ||
+    text.includes('acceptance') ||
+    text.includes('motor credit') ||
+    text.includes('ally') ||
+    text.includes('toyota') ||
+    text.includes('honda') ||
+    text.includes('nissan') ||
+    text.includes('ford credit') ||
+    text.includes('gm financial') ||
+    text.includes('vw credit') ||
+    text.includes('bmw financial') ||
+    text.includes('chrysler') ||
+    text.includes('carmax')
+  );
+}
+
+/**
+ * Checks if a record is Mortgagee / ISAOA / ATIMA
  */
 export function isMortgagee(record: MortgageRecord): boolean {
   const text = `${record.Name || ''} ${record.Name2 || ''} ${record.Notes || ''}`.toLowerCase();
-  return text.includes('mortgagee') || text.includes('isaoa') || text.includes('atima') || !isLossPayee(record);
+  return text.includes('mortgagee') || text.includes('isaoa') || text.includes('atima') || !isAutoOrLossPayee(record);
 }
 
 /**

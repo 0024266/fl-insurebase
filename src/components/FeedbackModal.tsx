@@ -12,6 +12,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { getAdminEmail, openMailClient } from '../utils/obfuscation';
+import { copyToClipboard as copyToClipboardHelper } from '../utils/clipboard';
 
 export type SubmissionType =
   | 'correct_mortgage'
@@ -26,6 +27,7 @@ interface FeedbackModalProps {
   targetEmail?: string;
   initialType?: SubmissionType;
   initialEntityName?: string;
+  initialRecordId?: string;
   initialDetails?: string;
   onToast: (title: string, desc?: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -36,6 +38,7 @@ export function FeedbackModal({
   targetEmail,
   initialType = 'correct_mortgage',
   initialEntityName = '',
+  initialRecordId = '',
   initialDetails = '',
   onToast
 }: FeedbackModalProps) {
@@ -122,6 +125,7 @@ export function FeedbackModal({
     '',
     `SUBMISSION TYPE: ${currentTypeConfig.label}`,
     `TARGET ENTITY / JURISDICTION / ZIP: ${entityName.trim() || 'Not specified'}`,
+    `RECORD ID: ${initialRecordId || 'N/A'}`,
     `FIELD(S) TO UPDATE / ADD: ${fieldsToUpdate.trim() || 'General details'}`,
     '',
     '--------------------------------------------------',
@@ -144,12 +148,12 @@ export function FeedbackModal({
   const body = bodyLines.join('\n');
 
   const copyToClipboard = async (text: string, key: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+    const success = await copyToClipboardHelper(text);
+    if (success) {
       setCopiedKey(key);
       onToast('Copied to Clipboard', label, 'success');
       setTimeout(() => setCopiedKey(null), 2000);
-    } catch {
+    } else {
       onToast('Copy Failed', 'Unable to copy to clipboard', 'error');
     }
   };
@@ -170,14 +174,21 @@ export function FeedbackModal({
   };
 
   const handleSubmitOnGithub = () => {
-    const issueTitle = `[FL InsureBase] Data Correction - ${entityName.trim() || 'General'}`;
-    const githubUrl = `https://github.com/0024266/fl-insurebase/issues/new?title=${encodeURIComponent(
-      issueTitle
-    )}&body=${encodeURIComponent(body)}`;
+    const entryType = submissionType.includes('permit') ? 'Property Record' : 'Mortgagee';
+    const params = new URLSearchParams({
+      template: 'data_correction.yml',
+      entry_type: entryType,
+      entity_name: entityName.trim() || 'General',
+      record_id: initialRecordId || '',
+      corrected_clause: newInformation.trim(),
+      submitter_agency: submitterInfo.trim() || 'Florida Insurance Agency'
+    });
+
+    const githubUrl = `https://github.com/0024266/fl-insurebase/issues/new?${params.toString()}`;
     window.open(githubUrl, '_blank', 'noopener,noreferrer');
     onToast(
       'GitHub Issue Opened',
-      'Opening pre-filled GitHub Issue on 0024266/fl-insurebase repository',
+      'Opening pre-filled GitHub Issue form on 0024266/fl-insurebase repository',
       'info'
     );
   };

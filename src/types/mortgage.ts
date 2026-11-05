@@ -15,7 +15,7 @@ export interface MortgageRecord {
   LastUpdated?: string;
 }
 
-export type CategoryFilter = 'all' | 'mortgagee' | 'loss_payee' | 'has_portal' | 'recently_updated';
+export type CategoryFilter = 'all' | 'mortgagee' | 'mortgagees' | 'loss_payee' | 'auto_loss_payee' | 'has_portal' | 'recently_updated';
 
 export type SortOption = 'name_asc' | 'name_desc' | 'updated_desc' | 'updated_asc' | 'state_asc';
 
