@@ -62,7 +62,8 @@ export function MortgageDetail({
   const [customization, setCustomization] = useState<ClauseCustomization>({
     loanNumber: '',
     borrowerName: '',
-    policyNumber: ''
+    policyNumber: '',
+    propertyAddress: ''
   });
 
   if (!record) {
@@ -92,7 +93,8 @@ export function MortgageDetail({
   const policyEmail = buildPolicyDocEmail(record, {
     loanNumber: customization.loanNumber,
     borrowerName: customization.borrowerName,
-    policyNumber: customization.policyNumber
+    policyNumber: customization.policyNumber,
+    propertyAddress: customization.propertyAddress
   });
 
   const targetEmail = record.email?.trim() || '';
@@ -478,12 +480,12 @@ export function MortgageDetail({
           </div>
         </div>
 
-        {/* Fields to add Loan #, Named Insured / Borrower, and Policy # (MOVED HERE AS REQUESTED) */}
+        {/* Fields to add Loan #, Named Insured / Borrower, Policy #, and Insured Property Address */}
         {showCustomizer && (
-          <div className="p-3 bg-[#f8f9fa] border-b border-[#e2e8f0] grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px]">
+          <div className="p-3 bg-[#f8f9fa] border-b border-[#e2e8f0] grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
             <div>
               <label className="block text-[#444] mb-1 font-bold">
-                Loan # / Account Number
+                Loan # / Mortgage Account #
               </label>
               <input
                 type="text"
@@ -492,6 +494,7 @@ export function MortgageDetail({
                   setCustomization((prev) => ({ ...prev, loanNumber: e.target.value }))
                 }
                 placeholder="e.g. 1092837482"
+                title="Required by lenders to route payment and update escrow."
                 className="app-input w-full font-mono text-[12px]"
               />
             </div>
@@ -506,12 +509,13 @@ export function MortgageDetail({
                   setCustomization((prev) => ({ ...prev, borrowerName: e.target.value }))
                 }
                 placeholder="e.g. John & Jane Doe"
+                title="Primary borrower name matching mortgage records."
                 className="app-input w-full font-sans text-[12px]"
               />
             </div>
             <div>
               <label className="block text-[#444] mb-1 font-bold">
-                Policy # (Optional)
+                Policy Number
               </label>
               <input
                 type="text"
@@ -519,8 +523,24 @@ export function MortgageDetail({
                 onChange={(e) =>
                   setCustomization((prev) => ({ ...prev, policyNumber: e.target.value }))
                 }
-                placeholder="e.g. HO-2026-9938"
+                placeholder="e.g. HO3-993821"
+                title="New or renewal insurance policy number."
                 className="app-input w-full font-mono text-[12px]"
+              />
+            </div>
+            <div>
+              <label className="block text-[#444] mb-1 font-bold">
+                Insured Property Address
+              </label>
+              <input
+                type="text"
+                value={customization.propertyAddress || ''}
+                onChange={(e) =>
+                  setCustomization((prev) => ({ ...prev, propertyAddress: e.target.value }))
+                }
+                placeholder="e.g. 1234 Ocean Dr, Apt 5B, Miami, FL 33139"
+                title="Physical location of the insured home (NOT the lender's PO Box)."
+                className="app-input w-full font-sans text-[12px]"
               />
             </div>
           </div>

@@ -92,68 +92,101 @@ export const buildFullClause = buildMortgageeClause;
 export interface PolicyEmailOptions {
   loanNumber?: string;
   borrowerName?: string;
+  insuredName?: string;
   policyNumber?: string;
+  propertyAddress?: string;
   carrierName?: string;
   toEmail?: string;
-  includeDetailsFooter?: boolean;
+  recipientEmail?: string;
 }
 
 /**
- * Builds email subject and body for sending policy documents (Dec Page & Invoice) to mortgagee
+ * Builds email subject and body for sending policy documents (Dec Page & Invoice) to mortgagee.
+ * Dynamically omits blank fields without placeholder brackets and separates Insured Property Address from Mortgagee Clause.
  */
 export function buildPolicyDocEmail(
   record: MortgageRecord,
   options?: PolicyEmailOptions
 ): { subject: string; body: string; mailtoUrl: string } {
-  const loanNum = options?.loanNumber?.trim();
-  const loanDisplay = loanNum ? `Loan #${loanNum}` : 'Loan #[Loan Number]';
-  const borrower = options?.borrowerName?.trim() || '[Borrower Name]';
-  const policyNum = options?.policyNumber?.trim() || '[Policy Number]';
-  const carrier = options?.carrierName?.trim();
-  const lenderName = record.Name?.trim() || 'Lender / Mortgagee';
-  
-  const fullAddress = [
-    record.Address,
-    [record.City, record.State, record.ZIP].filter(Boolean).join(' ')
-  ].filter(Boolean).join(', ');
+  const loanNumber = options?.loanNumber?.trim() || '';
+  const insuredName = (options?.insuredName ?? options?.borrowerName ?? '').trim();
+  const policyNumber = options?.policyNumber?.trim() || '';
+  const propertyAddress = options?.propertyAddress?.trim() || '';
 
-  // Professional industry standard subject line
-  const subjectParts = [`Evidence of Insurance & Mortgagee Bill - ${loanDisplay}`];
-  if (options?.borrowerName?.trim()) {
-    subjectParts.push(`- ${options.borrowerName.trim()}`);
+  const lenderName =
+    record.Name?.trim() ||
+    (record as unknown as { name?: string }).name?.trim() ||
+    '';
+
+  const rawRecordAddress = (record as unknown as { address?: string | { full?: string } }).address;
+  const formattedRecordClause = [
+    record.Name2?.trim(),
+    record.Address?.trim(),
+    [record.City?.trim(), record.State?.trim(), record.ZIP?.trim()].filter(Boolean).join(' ')
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const mortgageeClause =
+    typeof rawRecordAddress === 'string' && rawRecordAddress.trim()
+      ? rawRecordAddress.trim()
+      : rawRecordAddress && typeof rawRecordAddress === 'object' && rawRecordAddress.full
+      ? rawRecordAddress.full
+      : formattedRecordClause;
+
+  // Subject Line Generation (strictly omit blank tokens)
+  let subject = 'Attn: Insurance Dept - Evidence of Insurance & Escrow Bill';
+  if (loanNumber) {
+    subject += ` | Loan #${loanNumber}`;
   }
-  const subject = subjectParts.join(' ');
+  if (insuredName) {
+    subject += ` | ${insuredName}`;
+  }
 
-  // Structured, professional body content
-  const bodyLines: string[] = [
-    `Attn: Insurance Processing & Escrow Servicing Department`,
-    `${lenderName}`,
-    '',
-    `RE: Evidence of Property Insurance & Mortgagee Bill (Escrow Disbursement)`,
-    `Borrower / Named Insured: ${borrower}`,
-    `Loan / Account #: ${loanNum || '[Loan Number]'}`,
-    `Policy #: ${policyNum}`,
-    ...(carrier ? [`Carrier: ${carrier}`] : []),
-    ...(fullAddress ? [`Property / Insured Address: ${fullAddress}`] : []),
-    '',
-    `Dear Insurance Processing Team,`,
-    '',
-    `Please find attached the renewal/new policy Declarations Page (Evidence of Insurance) and annual premium invoice for the loan referenced above.`,
-    '',
-    `Action Requested:`,
-    `1. Please update your escrow records with the attached Evidence of Insurance.`,
-    `2. Please disburse the annual premium payment from the borrower's escrow account to the insurance carrier prior to the effective date to maintain continuous, uninterrupted coverage.`,
-    '',
-    `Kindly reply with confirmation of receipt and the scheduled escrow disbursement date.`,
-    '',
-    `Thank you for your prompt assistance,`,
-    `Insurance Servicing & Processing Team`
-  ];
+  // Dynamic Omission Logic for account detail lines
+  const detailLines = [
+    loanNumber ? `Loan / Account #: ${loanNumber}` : '',
+    insuredName ? `Insured / Borrower: ${insuredName}` : '',
+    propertyAddress ? `Property Address: ${propertyAddress}` : '',
+    policyNumber ? `Policy #: ${policyNumber}` : '',
+    mortgageeClause ? `Mortgagee Clause: ${mortgageeClause}` : ''
+  ].filter(Boolean);
 
-  const body = bodyLines.join('\n');
-  const recipient = (options?.toEmail !== undefined ? options.toEmail : record.email)?.trim() || '';
-  
-  const mailtoUrl = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const headerLines = [
+    'Attn: Insurance & Escrow Processing Department',
+    lenderName,
+    ...detailLines
+  ].filter(Boolean);
+
+  const rawBody = `${headerLines.join('\n')}
+
+Please find attached the Evidence of Insurance (Declaration Page) and annual premium invoice for the account above.
+
+REQUIRED ACTIONS:
+1. Update your hazard insurance and escrow records with the attached policy.
+2. Disburse payment for the enclosed premium invoice to the carrier prior to the renewal/effective date.
+3. Reply to confirm receipt and the scheduled disbursement date.
+
+Enclosures Attached:
+- Policy Declarations Page
+- Premium Invoice
+
+Thank you,
+Insurance Processing Department`;
+
+  const body = rawBody.replace(/\n{3,}/g, '\n\n').trim();
+
+  const rawRecipient =
+    options?.recipientEmail !== undefined
+      ? options.recipientEmail
+      : options?.toEmail !== undefined
+      ? options.toEmail
+      : record.email || '';
+  const recipientEmail = rawRecipient.trim();
+
+  const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(
+    subject
+  )}&body=${encodeURIComponent(body)}`;
 
   return {
     subject,

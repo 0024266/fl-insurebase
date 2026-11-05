@@ -7,13 +7,12 @@ import {
   Building2,
   FileText,
   Send,
-  AlertCircle,
-  Sparkles,
+  RotateCcw,
   X
 } from 'lucide-react';
 import { MortgageRecord } from '../types/mortgage';
-import { buildPolicyDocEmail, PolicyEmailOptions } from '../utils/formatters';
-import { openMailClient } from '../utils/obfuscation';
+import { buildPolicyDocEmail } from '../utils/formatters';
+import { copyToClipboard as copyTextToClipboard } from '../utils/clipboard';
 
 interface PolicyEmailModalProps {
   isOpen: boolean;
@@ -22,6 +21,7 @@ interface PolicyEmailModalProps {
   initialLoanNumber?: string;
   initialBorrowerName?: string;
   initialPolicyNumber?: string;
+  initialPropertyAddress?: string;
   onToast: (title: string, desc?: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -32,26 +32,34 @@ export function PolicyEmailModal({
   initialLoanNumber = '',
   initialBorrowerName = '',
   initialPolicyNumber = '',
+  initialPropertyAddress = '',
   onToast
 }: PolicyEmailModalProps) {
-  const [toEmail, setToEmail] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
   const [loanNumber, setLoanNumber] = useState('');
-  const [borrowerName, setBorrowerName] = useState('');
+  const [insuredName, setInsuredName] = useState('');
   const [policyNumber, setPolicyNumber] = useState('');
-  const [carrierName, setCarrierName] = useState('');
-  const [includeFooter, setIncludeFooter] = useState(false);
+  const [propertyAddress, setPropertyAddress] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Sync state when modal opens or record changes
   useEffect(() => {
-    if (record) {
-      setToEmail(record.email?.trim() || '');
+    if (record && isOpen) {
+      setRecipientEmail(record.email?.trim() || '');
       setLoanNumber(initialLoanNumber || '');
-      setBorrowerName(initialBorrowerName || '');
+      setInsuredName(initialBorrowerName || '');
       setPolicyNumber(initialPolicyNumber || '');
-      setCarrierName('');
+      setPropertyAddress(initialPropertyAddress || '');
+      setCopiedKey(null);
     }
-  }, [record, initialLoanNumber, initialBorrowerName, initialPolicyNumber, isOpen]);
+  }, [
+    record,
+    initialLoanNumber,
+    initialBorrowerName,
+    initialPolicyNumber,
+    initialPropertyAddress,
+    isOpen
+  ]);
 
   // Handle ESC key to close
   useEffect(() => {
@@ -68,31 +76,65 @@ export function PolicyEmailModal({
 
   if (!isOpen || !record) return null;
 
-  const emailOptions: PolicyEmailOptions = {
-    toEmail: toEmail.trim(),
-    loanNumber: loanNumber.trim(),
-    borrowerName: borrowerName.trim(),
-    policyNumber: policyNumber.trim(),
-    carrierName: carrierName.trim(),
-    includeDetailsFooter: includeFooter
-  };
+  const lenderLegalName =
+    record.Name?.trim() ||
+    (record as unknown as { name?: string }).name?.trim() ||
+    '';
 
-  const { subject, body, mailtoUrl } = buildPolicyDocEmail(record, emailOptions);
+  const rawRecordAddress = (record as unknown as { address?: string | { full?: string } }).address;
+  const formattedRecordClause = [
+    record.Name2?.trim(),
+    record.Address?.trim(),
+    [record.City?.trim(), record.State?.trim(), record.ZIP?.trim()].filter(Boolean).join(' ')
+  ]
+    .filter(Boolean)
+    .join(', ');
 
-  const copyToClipboard = async (text: string, key: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+  const mortgageeClauseOnFile =
+    typeof rawRecordAddress === 'string' && rawRecordAddress.trim()
+      ? rawRecordAddress.trim()
+      : rawRecordAddress && typeof rawRecordAddress === 'object' && rawRecordAddress.full
+      ? rawRecordAddress.full
+      : formattedRecordClause;
+
+  // Generate dynamic, zero-placeholder subject, body, and mailto URL
+  const { subject, body, mailtoUrl } = buildPolicyDocEmail(record, {
+    recipientEmail,
+    loanNumber,
+    insuredName,
+    policyNumber,
+    propertyAddress
+  });
+
+  const handleCopy = async (text: string, key: string, label: string) => {
+    const success = await copyTextToClipboard(text);
+    if (success) {
       setCopiedKey(key);
       onToast('Copied to Clipboard', label, 'success');
-      setTimeout(() => setCopiedKey(null), 2000);
-    } catch {
+      setTimeout(() => {
+        setCopiedKey((prev) => (prev === key ? null : prev));
+      }, 1500);
+    } else {
       onToast('Copy Failed', 'Unable to copy to clipboard', 'error');
     }
   };
 
-  const handleCopyAll = () => {
-    const fullText = `To: ${toEmail || 'Not specified'}\nSubject: ${subject}\n\n${body}`;
-    copyToClipboard(fullText, 'full_email', 'Full Email Template & Subject');
+  const handleClearFields = () => {
+    setLoanNumber('');
+    setInsuredName('');
+    setPolicyNumber('');
+    setPropertyAddress('');
+    setRecipientEmail(record.email?.trim() || '');
+    onToast('Fields Cleared', 'Reset loan, borrower, policy, and property address fields.', 'info');
+  };
+
+  const handleSendViaEmailApp = () => {
+    onToast(
+      'Email Client Opened',
+      'Opening your default email app with pre-filled policy documents template',
+      'success'
+    );
+    window.location.href = mailtoUrl;
   };
 
   return (
@@ -100,35 +142,30 @@ export function PolicyEmailModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="policy-email-modal-title"
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="relative bg-white border border-[#a8b3c0] rounded-[8px] w-full max-w-2xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 text-[#222]">
+      <div className="relative bg-white border border-[#a8b3c0] rounded-[8px] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 text-[#222]">
         {/* Modal Header */}
-        <div className="qq-modal-header px-4 py-3 text-white flex items-center justify-between gap-3 shadow-xs shrink-0 select-none">
+        <div className="qq-modal-header px-4 py-2.5 text-white flex items-center justify-between gap-3 shadow-xs shrink-0 select-none">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-[4px] bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0 shadow-2xs">
               <Mail className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] uppercase tracking-wider font-bold text-white/90 font-mono">
-                  Email Dispatcher
-                </span>
-                <span className="text-[10.5px] bg-white/20 text-white font-semibold px-2 py-0.2 rounded font-sans">
-                  Dec Page & Invoice
-                </span>
-              </div>
               <h2
                 id="policy-email-modal-title"
                 className="text-[15px] sm:text-[16px] font-bold text-white tracking-tight truncate leading-snug drop-shadow-xs"
               >
                 Send Policy Documents to Mortgagee
               </h2>
+              <p className="text-[11px] text-white/90 font-normal truncate">
+                Quickly generate pre-formatted escrow billing and policy evidence emails for lender insurance departments.
+              </p>
             </div>
           </div>
 
@@ -137,15 +174,15 @@ export function PolicyEmailModal({
             onClick={onClose}
             className="qq-modal-close-btn shrink-0 cursor-pointer shadow-md ml-1"
             title="Close (Esc)"
-            aria-label="Close"
+            aria-label="Close modal"
           >
             <X className="w-4 h-4 stroke-[3]" />
           </button>
         </div>
 
-        {/* Modal Scrollable Content */}
-        <div className="overflow-y-auto flex-1 p-4 sm:p-5 space-y-4 bg-[#fbfcfd]">
-          {/* Recipient Target Banner */}
+        {/* Modal Scrollable Body (max-h-[85vh] overflow-y-auto) */}
+        <div className="max-h-[85vh] overflow-y-auto flex-1 p-3.5 sm:p-4 space-y-3 bg-[#fbfcfd]">
+          {/* 1. Lender Card (Top) */}
           <div className="bg-white border border-[#d2d9e2] rounded-[4px] p-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-start gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded bg-[#e8f4fd] border border-[#bde0fe] text-[#004b91] flex items-center justify-center shrink-0 mt-0.5">
@@ -153,195 +190,222 @@ export function PolicyEmailModal({
               </div>
               <div className="min-w-0">
                 <h3 className="text-[13.5px] font-bold text-[#1f4e79] truncate">
-                  {record.Name}
+                  {lenderLegalName}
                 </h3>
-                <p className="text-[11.5px] text-[#555] truncate">
-                  {record.Address ? `${record.Address}, ${record.City || ''} ${record.State || ''} ${record.ZIP || ''}`.trim() : 'No physical address on file'}
-                </p>
+                {mortgageeClauseOnFile && (
+                  <p className="text-[11.5px] text-[#555] truncate" title={mortgageeClauseOnFile}>
+                    <span className="font-semibold text-[#444]">Mortgagee Mailing Clause:</span>{' '}
+                    {mortgageeClauseOnFile}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="shrink-0 flex items-center gap-2">
-              {record.Online && (
+            {record.Online && record.Online.trim() && (
+              <div className="shrink-0 flex items-center gap-2">
                 <a
                   href={record.Online.startsWith('http') ? record.Online : `https://${record.Online}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="qq-btn-secondary text-[11px] py-1 px-2.5 flex items-center gap-1"
+                  className="qq-btn-secondary text-[11px] py-1 px-2.5 flex items-center gap-1 font-semibold"
                   title="Open Mortgagee Document Portal"
                 >
                   <ExternalLink className="w-3 h-3 text-[#1f4e79]" />
-                  <span>Portal</span>
+                  <span>Lender Portal</span>
                 </a>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Form Fields: Loan # & Policy Details */}
-          <div className="bg-white border border-[#d2d9e2] rounded-[4px] p-3.5 shadow-2xs space-y-3">
-            <div className="flex items-center gap-1.5 border-b border-[#eee] pb-2">
-              <Sparkles className="w-3.5 h-3.5 text-[#1f4e79]" />
-              <h4 className="text-[11.5px] font-bold text-[#333] uppercase tracking-wider">
-                Loan & Reference Customization
-              </h4>
-            </div>
+          {/* 2. Compact Instructions Alert (Middle - Clean 2-Line Banner) */}
+          <div className="bg-[#eef5fc] border border-[#b6d4fe] rounded-[4px] px-3 py-2 text-[11.5px] text-[#1e3a5f] leading-snug shadow-2xs">
+            <strong className="font-bold text-[#0f2942]">Lender OCR Notice:</strong> Servicing centers route incoming mail by Loan #. Enter your details below, click{' '}
+            <strong className="font-bold text-[#0f2942]">Open in Email App</strong> (or copy), and attach your Dec Page and Invoice PDF.
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11.5px]">
+          {/* 3. Streamlined Form Inputs Grid (Bottom) */}
+          <div className="bg-white border border-[#d2d9e2] rounded-[4px] p-3 shadow-2xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px]">
+              {/* Field 1: Recipient Email Address */}
               <div>
-                <label className="block text-[#444] font-medium mb-1">
-                  Recipient Email Address <span className="text-rose-600">*</span>
+                <label
+                  htmlFor="dispatcher-recipient-email"
+                  className="block text-[#333] font-bold mb-1 text-[11.5px]"
+                >
+                  Recipient Email Address
                 </label>
                 <input
+                  id="dispatcher-recipient-email"
                   type="email"
-                  value={toEmail}
-                  onChange={(e) => setToEmail(e.target.value)}
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
                   placeholder="e.g. mortgagee_docs@servicing.com"
                   className="app-input w-full font-mono text-[12px]"
                 />
-                {!toEmail.trim() && (
-                  <p className="text-[10.5px] text-amber-700 flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3 h-3 shrink-0" />
-                    <span>No direct email found for this mortgagee. Enter one or copy the template.</span>
-                  </p>
-                )}
               </div>
 
+              {/* Field 2: Loan # / Mortgage Account # */}
               <div>
-                <label className="block text-[#444] font-medium mb-1">
-                  Loan # / Mortgage Account # <span className="text-[#1f4e79] font-bold">(In Subject & Body)</span>
+                <label
+                  htmlFor="dispatcher-loan-number"
+                  className="block text-[#333] font-bold mb-1 text-[11.5px]"
+                >
+                  Loan # / Mortgage Account #
                 </label>
                 <input
+                  id="dispatcher-loan-number"
                   type="text"
                   value={loanNumber}
                   onChange={(e) => setLoanNumber(e.target.value)}
                   placeholder="e.g. 1092837482"
-                  className="app-input w-full font-semibold"
+                  className="app-input w-full font-mono font-semibold text-[12px]"
                 />
               </div>
 
+              {/* Field 3: Named Insured / Borrower */}
               <div>
-                <label className="block text-[#444] font-medium mb-1">
-                  Named Insured / Policyholder
+                <label
+                  htmlFor="dispatcher-insured-name"
+                  className="block text-[#333] font-bold mb-1 text-[11.5px]"
+                >
+                  Named Insured / Borrower
                 </label>
                 <input
+                  id="dispatcher-insured-name"
                   type="text"
-                  value={borrowerName}
-                  onChange={(e) => setBorrowerName(e.target.value)}
+                  value={insuredName}
+                  onChange={(e) => setInsuredName(e.target.value)}
                   placeholder="e.g. John & Jane Doe"
-                  className="app-input w-full"
+                  className="app-input w-full text-[12px]"
                 />
               </div>
 
+              {/* Field 4: Policy Number */}
               <div>
-                <label className="block text-[#444] font-medium mb-1">
+                <label
+                  htmlFor="dispatcher-policy-number"
+                  className="block text-[#333] font-bold mb-1 text-[11.5px]"
+                >
                   Policy Number
                 </label>
                 <input
+                  id="dispatcher-policy-number"
                   type="text"
                   value={policyNumber}
                   onChange={(e) => setPolicyNumber(e.target.value)}
                   placeholder="e.g. HO3-993821"
-                  className="app-input w-full"
+                  className="app-input w-full font-mono text-[12px]"
                 />
               </div>
-            </div>
 
-            {/* Include Footer Option */}
-            <div className="pt-1 flex items-center gap-2">
-              <label className="inline-flex items-center gap-2 text-[11.5px] text-[#444] cursor-pointer select-none">
+              {/* Field 5: Insured Property Address */}
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="dispatcher-property-address"
+                  className="block text-[#333] font-bold mb-1 text-[11.5px]"
+                >
+                  Insured Property Address
+                </label>
                 <input
-                  type="checkbox"
-                  checked={includeFooter}
-                  onChange={(e) => setIncludeFooter(e.target.checked)}
-                  className="rounded border-[#aaa] text-[#1f4e79] focus:ring-[#1f4e79]"
+                  id="dispatcher-property-address"
+                  type="text"
+                  value={propertyAddress}
+                  onChange={(e) => setPropertyAddress(e.target.value)}
+                  placeholder="e.g. 1234 Ocean Dr, Apt 5B, Miami, FL 33139"
+                  className="app-input w-full text-[12px]"
                 />
-                <span>Include policy reference summary block in email footer</span>
-              </label>
+              </div>
             </div>
           </div>
 
-          {/* Real-time Email Preview Card */}
+          {/* 4. Concise Email Preview Card */}
           <div className="bg-[#fcfcfc] border border-[#cbd5e1] rounded-[4px] overflow-hidden shadow-2xs">
-            <div className="px-3.5 py-2 qq-card-header flex items-center justify-between gap-2">
+            <div className="px-3 py-1.5 qq-card-header flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-[#1f4e79]" />
-                <span className="text-[11.5px] font-bold text-[#2d3748] uppercase tracking-wider">
-                  Email Message Preview
+                <span className="text-[11px] font-bold text-[#2d3748] uppercase tracking-wider">
+                  Email Preview
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(subject, 'subject', 'Email Subject Line')}
-                  className="qq-btn-secondary text-[11px] py-0.5 px-2 flex items-center gap-1 cursor-pointer"
+                  onClick={() => handleCopy(subject, 'subject', 'Email Subject Line')}
+                  className="qq-btn-secondary text-[11px] py-0.5 px-2.5 flex items-center gap-1 cursor-pointer font-semibold"
                   title="Copy subject line"
                 >
-                  {copiedKey === 'subject' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                  <span>Copy Subject</span>
+                  {copiedKey === 'subject' ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                      <span className="text-emerald-700 font-bold">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy Subject</span>
+                    </>
+                  )}
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(body, 'body', 'Email Body Text')}
-                  className="qq-btn-secondary text-[11px] py-0.5 px-2 flex items-center gap-1 cursor-pointer"
-                  title="Copy body text"
+                  onClick={() => handleCopy(body, 'body', 'Email Body Text')}
+                  className="qq-btn-secondary text-[11px] py-0.5 px-2.5 flex items-center gap-1 cursor-pointer font-semibold"
+                  title="Copy email body text"
                 >
-                  {copiedKey === 'body' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                  <span>Copy Body</span>
+                  {copiedKey === 'body' ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                      <span className="text-emerald-700 font-bold">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy Body</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
 
-            {/* Email Header Info */}
-            <div className="p-3 bg-[#f8fafd] border-b border-[#e2e8f0] text-[12px] space-y-1.5 font-sans" data-nosnippet="true">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <span className="text-[#64748b] font-medium w-16 shrink-0">To:</span>
-                <span className="font-mono text-[#0f172a] font-semibold">
-                  {toEmail ? toEmail : <span className="text-[#94a3b8] italic">No recipient email set</span>}
+            {/* Subject Header Bar */}
+            <div
+              className="px-3 py-2 bg-[#f8fafd] border-b border-[#e2e8f0] text-[11.5px] space-y-1 font-sans"
+              data-nosnippet="true"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-[#64748b] font-bold w-14 shrink-0">To:</span>
+                <span className="font-mono text-[#0f172a] font-semibold truncate">
+                  {recipientEmail.trim() || <span className="text-[#94a3b8] italic">No recipient email set</span>}
                 </span>
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-                <span className="text-[#64748b] font-medium w-16 shrink-0 pt-0.5">Subject:</span>
-                <span className="font-semibold text-[#004b91] break-all select-all">
+              <div className="flex items-start gap-2">
+                <span className="text-[#64748b] font-bold w-14 shrink-0">Subject:</span>
+                <span className="font-semibold text-[#004b91] break-words select-all leading-snug">
                   {subject}
                 </span>
               </div>
             </div>
 
             {/* Email Body Content */}
-            <div className="p-3.5 bg-white font-sans text-[12.5px] text-[#1e293b] whitespace-pre-wrap leading-relaxed select-all selection:bg-[#cce2ff] max-h-56 overflow-y-auto">
+            <div className="p-3 bg-white font-mono text-[11.5px] text-[#1e293b] whitespace-pre-wrap leading-relaxed select-all selection:bg-[#cce2ff] max-h-48 overflow-y-auto">
               {body}
-            </div>
-
-            <div className="px-3 py-1.5 bg-[#f1f5f9] border-t border-[#e2e8f0] text-[11px] text-[#64748b] flex items-center gap-1.5">
-              <span className="font-semibold text-[#475569]">Workflow Note:</span>
-              <span>Remember to attach your declaration page PDF and invoice in your email client after opening.</span>
             </div>
           </div>
         </div>
 
-        {/* Modal Footer with Primary Mailto Action and Copy Actions */}
-        <div className="px-4 py-3 bg-[#f1f4f8] border-t border-[#d8e0e8] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleCopyAll}
-              className="qq-btn-secondary text-[11.5px] py-1.5 px-3 flex items-center gap-1.5 font-semibold cursor-pointer"
-            >
-              {copiedKey === 'full_email' ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Full Email Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 text-[#555]" />
-                  <span>Copy Full Template</span>
-                </>
-              )}
-            </button>
-          </div>
+        {/* 5. Streamlined Modal Footer */}
+        <div className="px-4 py-2.5 bg-[#f1f4f8] border-t border-[#d8e0e8] flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleClearFields}
+            className="qq-btn-secondary text-[11.5px] py-1.5 px-3 flex items-center gap-1.5 font-semibold text-[#555] hover:text-rose-700 cursor-pointer"
+            title="Clear all form fields"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Clear Fields</span>
+          </button>
 
           <div className="flex items-center gap-2 ml-auto">
             <button
@@ -349,18 +413,14 @@ export function PolicyEmailModal({
               onClick={onClose}
               className="qq-btn-secondary text-[11.5px] py-1.5 px-3.5 font-semibold cursor-pointer"
             >
-              Cancel
+              Close
             </button>
 
-            {/* Primary Action: Mail Client Launcher Button */}
             <button
               type="button"
-              onClick={() => {
-                onToast('Email Client Opened', 'Opening your default mail app with pre-filled policy docs template', 'success');
-                openMailClient(toEmail || '', subject, body);
-              }}
-              className="qq-btn-green py-1.5 px-4 text-[12px] flex items-center gap-2 font-bold cursor-pointer shadow-sm text-center justify-center"
-              title="Open default email application"
+              onClick={handleSendViaEmailApp}
+              className="qq-btn-green py-1.5 px-4 text-[12px] flex items-center gap-2 font-bold cursor-pointer shadow-xs text-center justify-center"
+              title="Open in your default email application"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Send via your email app</span>

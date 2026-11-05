@@ -23,6 +23,7 @@ export interface ClauseCustomization {
   loanNumber?: string;
   borrowerName?: string;
   policyNumber?: string;
+  propertyAddress?: string;
 }
 
 export interface ToastMessage {
