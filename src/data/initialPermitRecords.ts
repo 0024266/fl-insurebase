@@ -8631,7 +8631,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://www.miamigardens-fl.gov/941/CMG-Customer-Self-Service-CSS",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -8643,7 +8643,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://www.miamigardens-fl.gov/941/CMG-Customer-Self-Service-CSS",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9051,7 +9051,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://aca-prod.accela.com/keybiscayne/Default.aspx",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9111,7 +9111,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://vlg-balharbour-fl.smartgovcommunity.com/",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9135,7 +9135,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://pine-trk.aspgov.com/eTRAKiT/",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9147,7 +9147,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://eden.palmettobay-fl.gov/EdenWebNet/Default.aspx?Build=PM.PermitsHome&ClearErrors=Y",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9159,7 +9159,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://eden.palmettobay-fl.gov/EdenWebNet/Default.aspx?Build=PM.PermitsHome&ClearErrors=Y",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9195,7 +9195,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://www.citynmb.com/1440/Online-Self-Service-Permitting-Portal-eD",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9243,7 +9243,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://mias-trk.aspgov.com/eTRAKiT/",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9279,7 +9279,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://www.miamigardens-fl.gov/941/CMG-Customer-Self-Service-CSS",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9387,7 +9387,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://aven.csqrcloud.com/community-etrakit/",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9399,7 +9399,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://aven.csqrcloud.com/community-etrakit/",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9507,7 +9507,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://websrvcs.cutlerbay-fl.gov/Default.aspx?Build=PM.PermitsHome&ShowLogon=ShowLogon",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },
@@ -9519,7 +9519,7 @@ export const INITIAL_FLORIDA_PERMIT_DATASET: FloridaZipRecord[] = [
     "State": "FL",
     "PAlink": "https://www.miamidade.gov/Apps/PA/PropertySearch/#/",
     "PermitByCounty": "https://www.miamidade.gov/Apps/RER/ePermittingMenu/Home/Permits",
-    "PermitByCity": null,
+    "PermitByCity": "https://websrvcs.cutlerbay-fl.gov/Default.aspx?Build=PM.PermitsHome&ShowLogon=ShowLogon",
     "Terrain": "C",
     "LastUpdated": "2026-03-20"
   },

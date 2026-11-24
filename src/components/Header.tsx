@@ -6,22 +6,16 @@ import {
   Upload,
   Download,
   Link as LinkIcon,
-  ChevronDown,
-  Building2,
   FileText,
-  Landmark,
-  Shield,
-  ShieldCheck,
   Menu,
   MessageSquarePlus,
   Share2,
-  Check,
-  User,
-  Sparkles
+  Check
 } from 'lucide-react';
 import { DirectoryMode } from '../types/permits';
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageSelector } from './LanguageSelector';
+import { ViewSettingsBar } from './ViewSettingsBar';
 import { Logo } from './Logo';
 
 interface HeaderProps {
@@ -52,6 +46,7 @@ export function Header({
   onExitAdmin,
   onOpenFeedback,
   onShare,
+  onOpenShortcuts,
   onAddNew,
   onOpenImport,
   onOpenBulkUpdate,
@@ -69,8 +64,17 @@ export function Header({
         setIsAdminMenuOpen(false);
       }
     }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsAdminMenuOpen(false);
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const handleShareClick = () => {
@@ -83,9 +87,9 @@ export function Header({
 
   return (
     <header className="qq-top-header select-none sticky top-0 z-40">
-      <div className="max-w-[1850px] mx-auto px-3 sm:px-4 py-1.5 flex items-center justify-between gap-3">
-        {/* Left Section: QQCatalyst Orange Logo & Top Navigation Links */}
-        <div className="flex items-center gap-3 lg:gap-5 min-w-0">
+      <div className="max-w-[1850px] mx-auto px-3 sm:px-4 py-1.5 flex items-center justify-between gap-2 sm:gap-3">
+        {/* Left Section: Brand Logo & Top Navigation Links */}
+        <div className="flex items-center gap-2.5 lg:gap-5 min-w-0">
           {/* Brand Logo: Clean FL InsureBase vector emblem & lockup */}
           <Logo onTabChange={onTabChange} />
 
@@ -161,7 +165,8 @@ export function Header({
             <select
               value={activeTab}
               onChange={(e) => onTabChange(e.target.value as DirectoryMode)}
-              className="bg-white text-[#286090] font-bold text-xs py-1 px-2 rounded-[3px] border border-[#b8b8b8] shadow-xs cursor-pointer focus:ring-1 focus:ring-[#286090] max-w-[170px]"
+              aria-label={isSpanish ? 'Seleccionar directorio' : 'Select directory section'}
+              className="bg-white text-[#286090] font-bold text-xs py-1 px-2 rounded-[3px] border border-[#b8b8b8] shadow-xs cursor-pointer focus:ring-1 focus:ring-[#286090] max-w-[145px] sm:max-w-[170px]"
             >
               <option value="mortgages">{t('tabMortgages')}</option>
               <option value="property">{t('tabPermits')}</option>
@@ -173,8 +178,8 @@ export function Header({
           </div>
         </div>
 
-        {/* Right Section: Share Button, Language Selector, User Profile & Admin */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0 text-xs">
+        {/* Right Section: Share, Language, Feedback, Settings & Admin */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 text-xs">
           {/* Share Button */}
           <button
             type="button"
@@ -185,16 +190,17 @@ export function Header({
                 : 'qq-btn-silver text-[#333]'
             }`}
             title={t('btnShareTooltip')}
+            aria-label={t('btnShareTooltip')}
           >
             {isShareCopied ? (
               <>
                 <Check className="w-3 h-3 stroke-[2.5]" />
-                <span className="hidden xs:inline">{t('btnShareCopied')}</span>
+                <span className="hidden sm:inline">{t('btnShareCopied')}</span>
               </>
             ) : (
               <>
                 <Share2 className="w-3 h-3 text-[#286090]" />
-                <span className="hidden xs:inline">{t('btnShare')}</span>
+                <span className="hidden sm:inline">{t('btnShare')}</span>
               </>
             )}
           </button>
@@ -206,13 +212,23 @@ export function Header({
           <button
             type="button"
             onClick={onOpenFeedback}
-            className="qq-btn-green py-1 px-2.5 text-[11.5px] flex items-center gap-1 font-bold cursor-pointer shadow-xs whitespace-nowrap"
+            className="qq-btn-green py-1 px-2 sm:px-2.5 text-[11.5px] flex items-center gap-1 font-bold cursor-pointer shadow-xs whitespace-nowrap"
             title={t('btnAddCorrectTooltip')}
+            aria-label={t('btnAddCorrectTooltip')}
           >
             <MessageSquarePlus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t('btnAddCorrect')}</span>
-            <span className="sm:hidden hidden xs:inline">Update</span>
+            <span className="sm:hidden hidden xs:inline">{isSpanish ? 'Sugerir' : 'Update'}</span>
           </button>
+
+          {/* Consolidated View & Ergonomics Settings Button & Popover */}
+          <ViewSettingsBar
+            onOpenShortcuts={() => {
+              if (onOpenShortcuts) onOpenShortcuts();
+            }}
+            totalCount={totalCount}
+            filteredCount={filteredCount}
+          />
 
           {/* Hamburger Menu (Admin Controls / Admin Login) */}
           <div className="relative" ref={menuRef}>
@@ -226,6 +242,7 @@ export function Header({
               }`}
               title={isAdmin ? "Administrator Controls" : "Menu & Admin Login"}
               aria-label="Menu"
+              aria-expanded={isAdminMenuOpen}
             >
               <Menu className="w-4 h-4" />
             </button>

@@ -16,6 +16,13 @@ import {
   generatePermitObjectId
 } from '../utils/permitFormatters';
 import { formatCurrentTimestamp } from '../utils/formatters';
+import {
+  fetchDirectoryFromMongo,
+  syncCreatePermit,
+  syncUpdatePermit,
+  syncDeletePermit,
+  syncBulkUpdatePermits
+} from '../utils/api';
 
 const PERMIT_STORAGE_KEY = 'agency_fl_permits_db';
 
@@ -84,7 +91,20 @@ export function useFloridaPermits(
     setCurrentPage(1);
   }, [debouncedQuery, countyFilter, cityFilter, terrainFilter, hasCityPermitOnly, hasCountyPermitOnly, sortOption, pageSize]);
 
-  // Save to localStorage
+  // Hydrate from shared MongoDB database on mount
+  useEffect(() => {
+    let mounted = true;
+    fetchDirectoryFromMongo().then((res) => {
+      if (mounted && res && res.source === 'mongodb' && Array.isArray(res.permits) && res.permits.length > 0) {
+        setRecords(deduplicatePermitRecords(res.permits));
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Save to localStorage cache
   useEffect(() => {
     try {
       localStorage.setItem(PERMIT_STORAGE_KEY, JSON.stringify(records));
@@ -258,7 +278,8 @@ export function useFloridaPermits(
 
     setRecords(prev => [newRecord, ...prev]);
     setSelectedId(newId);
-    addToast('Permit Record Created', `ZIP ${newRecord.zip} (${newRecord.City}) added.`, 'success');
+    syncCreatePermit(newRecord);
+    addToast('Permit Record Created', `ZIP ${newRecord.zip} (${newRecord.City}) added and synced to MongoDB.`, 'success');
     return newId;
   }, [addToast]);
 
@@ -267,7 +288,7 @@ export function useFloridaPermits(
     setRecords(prev =>
       prev.map(item => {
         if (getPermitRecordId(item) === id) {
-          return {
+          const updated: FloridaZipRecord = {
             ...item,
             ...updatedFields,
             zip: updatedFields.zip !== undefined ? formatZipCode(updatedFields.zip) : item.zip,
@@ -275,11 +296,13 @@ export function useFloridaPermits(
             County: updatedFields.County !== undefined ? updatedFields.County.trim().toUpperCase() : item.County,
             LastUpdated: formatCurrentTimestamp()
           };
+          syncUpdatePermit(id, updated);
+          return updated;
         }
         return item;
       })
     );
-    addToast('Permit Record Updated', 'Changes saved successfully.', 'success');
+    addToast('Permit Record Updated', 'Changes saved and synced to MongoDB.', 'success');
   }, [addToast]);
 
   // CRUD: Delete
@@ -292,7 +315,8 @@ export function useFloridaPermits(
       }
       return remaining;
     });
-    addToast('Record Deleted', `ZIP ${itemToDelete?.zip || ''} removed.`, 'info');
+    syncDeletePermit(id);
+    addToast('Record Deleted', `ZIP ${itemToDelete?.zip || ''} removed from MongoDB.`, 'info');
   }, [records, selectedId, addToast]);
 
   // Bulk update links across multiple records matching criteria
@@ -404,9 +428,11 @@ export function useFloridaPermits(
         });
       });
 
+      syncBulkUpdatePermits(options);
+
       addToast(
         'Bulk Link Update Applied',
-        `Successfully updated portal links for ${changedCount} record${changedCount === 1 ? '' : 's'}.`,
+        `Successfully updated and synced portal links for ${changedCount} record${changedCount === 1 ? '' : 's'} to MongoDB.`,
         'success'
       );
 

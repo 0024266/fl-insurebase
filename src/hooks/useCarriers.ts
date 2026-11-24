@@ -11,6 +11,12 @@ import {
   classifyCcFee,
   generateCarrierSlug
 } from '../utils/carrierFormatters';
+import {
+  fetchDirectoryFromMongo,
+  syncCreateCarrier,
+  syncUpdateCarrier,
+  syncDeleteCarrier
+} from '../utils/api';
 
 const STORAGE_KEY = 'agency_carriers_db';
 const DELETED_IDS_KEY = 'agency_carriers_deleted_ids';
@@ -55,7 +61,20 @@ export function useCarriers(
   const [sortOption, setSortOption] = useState<CarrierSortOption>('name_asc');
   const [selectedId, setSelectedId] = useState<string>('');
 
-  // Persist to localStorage on change
+  // Hydrate from shared MongoDB database on mount
+  useEffect(() => {
+    let mounted = true;
+    fetchDirectoryFromMongo().then((res) => {
+      if (mounted && res && res.source === 'mongodb' && Array.isArray(res.carriers) && res.carriers.length > 0) {
+        setRecords(res.carriers);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Persist to localStorage cache on change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
@@ -205,6 +224,7 @@ export function useCarriers(
         LastUpdated: today
       };
       setRecords((prev) => [newRecord, ...prev]);
+      syncCreateCarrier(newRecord);
       return newId;
     },
     [records]
@@ -214,16 +234,19 @@ export function useCarriers(
     (id: string, data: Omit<CarrierRecord, 'id' | 'LastUpdated'>) => {
       const today = new Date().toISOString().split('T')[0];
       setRecords((prev) =>
-        prev.map((rec) =>
-          rec.id === id
-            ? {
-                ...rec,
-                ...data,
-                id,
-                LastUpdated: today
-              }
-            : rec
-        )
+        prev.map((rec) => {
+          if (rec.id === id) {
+            const updated: CarrierRecord = {
+              ...rec,
+              ...data,
+              id,
+              LastUpdated: today
+            };
+            syncUpdateCarrier(id, updated);
+            return updated;
+          }
+          return rec;
+        })
       );
     },
     []
@@ -232,6 +255,7 @@ export function useCarriers(
   const deleteRecord = useCallback(
     (id: string) => {
       setRecords((prev) => prev.filter((r) => r.id !== id));
+      syncDeleteCarrier(id);
       try {
         const deletedRaw = localStorage.getItem(DELETED_IDS_KEY);
         const deletedIds = new Set<string>(deletedRaw ? JSON.parse(deletedRaw) : []);
@@ -244,7 +268,7 @@ export function useCarriers(
         setSelectedId('');
       }
       if (onToast) {
-        onToast('Carrier Deleted', 'Carrier record removed from directory.', 'info');
+        onToast('Carrier Deleted', 'Carrier record removed from MongoDB.', 'info');
       }
     },
     [selectedId, onToast]

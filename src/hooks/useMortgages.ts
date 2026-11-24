@@ -13,6 +13,12 @@ import {
   formatCurrentTimestamp,
   deduplicateRecords
 } from '../utils/formatters';
+import {
+  fetchDirectoryFromMongo,
+  syncCreateMortgage,
+  syncUpdateMortgage,
+  syncDeleteMortgage
+} from '../utils/api';
 
 const STORAGE_KEY = 'agency_mortgage_db';
 
@@ -96,7 +102,20 @@ export function useMortgages() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Persist to localStorage whenever records change
+  // Hydrate from shared MongoDB database on mount
+  useEffect(() => {
+    let mounted = true;
+    fetchDirectoryFromMongo().then((res) => {
+      if (mounted && res && res.source === 'mongodb' && Array.isArray(res.mortgages) && res.mortgages.length > 0) {
+        setRecords(deduplicateRecords(res.mortgages));
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Persist to localStorage cache whenever records change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
@@ -260,7 +279,8 @@ export function useMortgages() {
 
     setRecords(prev => [newRecord, ...prev]);
     setSelectedId(newId);
-    addToast('Record Created', `"${newRecord.Name}" added to the directory.`, 'success');
+    syncCreateMortgage(newRecord);
+    addToast('Record Created', `"${newRecord.Name}" added and synced to MongoDB.`, 'success');
     return newId;
   }, [addToast]);
 
@@ -269,16 +289,18 @@ export function useMortgages() {
     setRecords(prev =>
       prev.map(item => {
         if (getRecordId(item) === id) {
-          return {
+          const updated: MortgageRecord = {
             ...item,
             ...updatedFields,
             LastUpdated: formatCurrentTimestamp()
           };
+          syncUpdateMortgage(id, updated);
+          return updated;
         }
         return item;
       })
     );
-    addToast('Record Updated', `Changes saved successfully.`, 'success');
+    addToast('Record Updated', `Changes saved and synced to MongoDB.`, 'success');
   }, [addToast]);
 
   // CRUD: Delete
@@ -291,7 +313,8 @@ export function useMortgages() {
       }
       return remaining;
     });
-    addToast('Record Deleted', `"${itemToDelete?.Name || 'Record'}" removed from directory.`, 'info');
+    syncDeleteMortgage(id);
+    addToast('Record Deleted', `"${itemToDelete?.Name || 'Record'}" removed from MongoDB.`, 'info');
   }, [records, selectedId, addToast]);
 
   // Reset search and filters (safe for public & regular use - preserves imported records)

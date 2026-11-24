@@ -41,7 +41,7 @@ import { parseUrlHash, syncUrlHash, getShareableUrl } from './utils/urlState';
 import { updateDynamicSeo } from './utils/seo';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { PreferencesProvider, usePreferences } from './context/PreferencesContext';
-import { ViewSettingsBar } from './components/ViewSettingsBar';
+import { logoutAdminSession } from './utils/api';
 import { ShieldCheck, LogOut, Link as LinkIcon, Building2, MapPin, Shield } from 'lucide-react';
 
 function DirectoryApp() {
@@ -91,14 +91,8 @@ function DirectoryApp() {
     permit.selectedRecord
   ]);
 
-  // Operational Mode: Public (Read-Only) vs Admin (Protected Backend Management)
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    try {
-      return sessionStorage.getItem('agency_admin_session') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  // Operational Mode: Public (Read-Only) vs Admin (Protected Backend Management, held in memory)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   // Modal States
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -441,25 +435,16 @@ function DirectoryApp() {
   // Admin Authentication Handlers
   const handleAdminSuccess = () => {
     setIsAdmin(true);
-    try {
-      sessionStorage.setItem('agency_admin_session', 'true');
-    } catch {
-      // ignore
-    }
     mortgage.addToast(
       isSpanish ? 'Modo Administrador Habilitado' : 'Admin Mode Activated',
-      isSpanish ? 'Gestión y edición de registros desbloqueadas' : 'Record editing, creation, and batch updates enabled.',
+      isSpanish ? 'Gestión y sincronización con MongoDB desbloqueadas' : 'MongoDB record editing, creation, and batch updates enabled.',
       'success'
     );
   };
 
   const handleExitAdmin = () => {
     setIsAdmin(false);
-    try {
-      sessionStorage.removeItem('agency_admin_session');
-    } catch {
-      // ignore
-    }
+    logoutAdminSession();
     mortgage.addToast(
       isSpanish ? 'Modo Administrador Desactivado' : 'Exited Admin Mode',
       isSpanish ? 'Cambiado a modo de solo lectura pública' : 'Switched to Public Read-Only Search Directory',
@@ -836,7 +821,7 @@ function DirectoryApp() {
 
   return (
     <div className={`min-h-screen bg-[#f4f5f7] flex flex-col font-sans antialiased text-[#222] ${fontScaleClass}`}>
-      {/* 1. Universal Enterprise Top Navigation Header */}
+      {/* 1. Universal Enterprise Top Navigation Header (with integrated View & Display Settings) */}
       <Header
         activeTab={activeTab}
         onTabChange={handleTabChange}
@@ -853,13 +838,6 @@ function DirectoryApp() {
         onOpenBulkUpdate={isAdmin ? () => handleOpenBulkUpdate('city') : undefined}
         onExport={isAdmin ? handleHeaderExport : undefined}
         onDownloadWordPressHtml={isAdmin ? handleDownloadWordPressHtml : undefined}
-      />
-
-      {/* 2. Persistent View Settings & Display Toolbar (Second Bar) */}
-      <ViewSettingsBar
-        onOpenShortcuts={() => setIsShortcutsOpen(true)}
-        totalCount={activeTotalCount}
-        filteredCount={activeFilteredCount}
       />
 
       {/* Admin Mode Active Banner Bar */}

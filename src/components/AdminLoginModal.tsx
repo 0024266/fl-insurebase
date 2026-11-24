@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, KeyRound, X, AlertCircle, ShieldCheck, Loader2 } from 'lucide-react';
+import { Lock, X, AlertCircle, ShieldCheck, Loader2, Database } from 'lucide-react';
+import { fetchAuthStatus, loginAdminPasscode, setupAdminPasscode } from '../utils/api';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -7,29 +8,28 @@ interface AdminLoginModalProps {
   onSuccess: () => void;
 }
 
-// Salted cryptographic SHA-256 verification (no plaintext password stored in source)
-const AUTH_SALT = 'agency_portal_secure_fl_2026_salt_9xK';
-const EXPECTED_HASH = '8fa7ae3dd9168a7c528cf0c8224e7938154068fc05621671a8a68c4458d4c51c';
-
-async function verifyPasscode(enteredPasscode: string): Promise<boolean> {
-  try {
-    const combined = `${AUTH_SALT}:${enteredPasscode.trim()}`;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(combined);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-    return hashHex === EXPECTED_HASH;
-  } catch (err) {
-    console.error('Cryptographic verification error:', err);
-    return false;
-  }
-}
-
 export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
   const [passcode, setPasscode] = useState('');
+  const [confirmPasscode, setConfirmPasscode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(true);
+  const [dbConnected, setDbConnected] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setIsCheckingStatus(true);
+    setError(null);
+    fetchAuthStatus()
+      .then((status) => {
+        setIsConfigured(status.configured);
+        setDbConnected(status.dbConnected);
+      })
+      .finally(() => {
+        setIsCheckingStatus(false);
+      });
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -49,19 +49,34 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     e.preventDefault();
     if (!passcode.trim() || isVerifying) return;
 
+    if (!isConfigured) {
+      if (passcode.trim().length < 4) {
+        setError('Passcode must be at least 4 characters.');
+        return;
+      }
+      if (passcode.trim() !== confirmPasscode.trim()) {
+        setError('Passcodes do not match.');
+        return;
+      }
+    }
+
     setIsVerifying(true);
     setError(null);
 
-    const isValid = await verifyPasscode(passcode);
+    const result = isConfigured
+      ? await loginAdminPasscode(passcode.trim())
+      : await setupAdminPasscode(passcode.trim());
+
     setIsVerifying(false);
 
-    if (isValid) {
+    if (result.token) {
       setError(null);
       setPasscode('');
+      setConfirmPasscode('');
       onSuccess();
       onClose();
     } else {
-      setError('Invalid admin passcode. Please check credentials and try again.');
+      setError(result.error || 'Invalid admin passcode. Please check credentials and try again.');
     }
   };
 
@@ -83,7 +98,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
               <Lock className="w-3.5 h-3.5 text-white" />
             </div>
             <h3 id="admin-login-title" className="text-sm font-bold text-white tracking-wide truncate">
-              Admin Authentication
+              {isConfigured ? 'Admin Authentication' : 'First-Run Admin Setup'}
             </h3>
           </div>
           <button
@@ -99,35 +114,77 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 text-xs bg-[#fbfcfd]">
-          <p className="text-neutral-600 text-xs leading-relaxed border-b border-[#e2e8f0] pb-2.5">
-            Enter your administrative passcode to unlock record editing, additions, deletions, and bulk link updates.
-          </p>
-
-          <div>
-            <label className="block text-neutral-800 font-bold mb-1">
-              Admin Passcode / PIN
-            </label>
-            <input
-              type="password"
-              autoFocus
-              disabled={isVerifying}
-              value={passcode}
-              onChange={(e) => {
-                setPasscode(e.target.value);
-                if (error) setError(null);
-              }}
-              placeholder="Enter passcode..."
-              className={`app-input w-full font-mono text-sm py-2 px-3 tracking-widest ${
-                error ? 'border-rose-500 bg-rose-50/50' : ''
-              }`}
-            />
-            {error && (
-              <p className="text-rose-600 mt-1.5 flex items-center gap-1 font-semibold text-[11px]">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{error}</span>
-              </p>
-            )}
+          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#e2e8f0]">
+            <p className="text-neutral-600 text-xs leading-relaxed">
+              {isConfigured
+                ? 'Enter your administrative passcode to unlock shared MongoDB record editing and management.'
+                : 'Claim your initial Admin passcode. It will be securely hashed on the server and saved to MongoDB.'}
+            </p>
           </div>
+
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-[3px] border bg-[#f4f6f8] border-[#d0d7de] text-[#333]">
+            <Database className={`w-3.5 h-3.5 ${dbConnected ? 'text-emerald-600' : 'text-amber-600'}`} />
+            <span>
+              {dbConnected
+                ? 'MongoDB Cloud Connected (fl_insurebase)'
+                : 'Configure MONGODB_URI in Secrets for Cloud Sync'}
+            </span>
+          </div>
+
+          {isCheckingStatus ? (
+            <div className="py-4 flex items-center justify-center gap-2 text-neutral-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Checking security configuration...</span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-neutral-800 font-bold mb-1">
+                  {isConfigured ? 'Admin Passcode / PIN' : 'Create Admin Passcode'}
+                </label>
+                <input
+                  type="password"
+                  autoFocus
+                  disabled={isVerifying}
+                  value={passcode}
+                  onChange={(e) => {
+                    setPasscode(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  placeholder={isConfigured ? 'Enter passcode...' : 'Choose a passcode (4+ chars)...'}
+                  className={`app-input w-full font-mono text-sm py-2 px-3 tracking-widest ${
+                    error ? 'border-rose-500 bg-rose-50/50' : ''
+                  }`}
+                />
+              </div>
+
+              {!isConfigured && (
+                <div>
+                  <label className="block text-neutral-800 font-bold mb-1">
+                    Confirm Admin Passcode
+                  </label>
+                  <input
+                    type="password"
+                    disabled={isVerifying}
+                    value={confirmPasscode}
+                    onChange={(e) => {
+                      setConfirmPasscode(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    placeholder="Re-enter passcode..."
+                    className="app-input w-full font-mono text-sm py-2 px-3 tracking-widest"
+                  />
+                </div>
+              )}
+
+              {error && (
+                <p className="text-rose-600 mt-1.5 flex items-center gap-1 font-semibold text-[11px]">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{error}</span>
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="pt-2 border-t border-[#e2e8f0] flex items-center justify-end gap-2">
             <button
@@ -139,9 +196,9 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             </button>
             <button
               type="submit"
-              disabled={isVerifying || !passcode.trim()}
+              disabled={isVerifying || isCheckingStatus || !passcode.trim()}
               className={`qq-btn-green py-1.5 px-4 text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
-                isVerifying || !passcode.trim() ? 'opacity-50 cursor-not-allowed' : ''
+                isVerifying || isCheckingStatus || !passcode.trim() ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               {isVerifying ? (
@@ -152,7 +209,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
               ) : (
                 <>
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Unlock Admin</span>
+                  <span>{isConfigured ? 'Unlock Admin' : 'Claim & Unlock Admin'}</span>
                 </>
               )}
             </button>
@@ -162,3 +219,4 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     </div>
   );
 }
+
