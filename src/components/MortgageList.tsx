@@ -23,7 +23,6 @@ import {
   getRecordId,
   HighlightedText,
   sanitizeUrl,
-  cleanPhoneUri,
   isAutoOrLossPayee
 } from '../utils/formatters';
 import { downloadVCard, exportMortgageesCsv } from '../utils/vcard';
@@ -97,12 +96,12 @@ export function MortgageList({
 
   if (records.length === 0) {
     return (
-      <div className="bg-white border border-[#d5d5d5] rounded-[3px] p-8 text-center text-[#555555] shadow-xs">
-        <Building2 className="w-10 h-10 text-[#999999] mx-auto mb-2.5" />
-        <p className="text-[14px] font-bold text-[#222222]">
+      <div className="bg-white border border-slate-200/90 rounded-xl p-10 text-center text-slate-600 shadow-2xs">
+        <Building2 className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+        <p className="text-sm font-bold text-slate-900">
           {isSpanish ? 'No se encontraron registros de prestamistas' : 'No Mortgagee Records Found'}
         </p>
-        <p className="text-[12px] text-[#666666] mt-1 max-w-md mx-auto">
+        <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
           {isSpanish
             ? 'Intente buscar con otro término o limpie los filtros activos.'
             : 'Try adjusting your search criteria, clearing active filters, or checking spelling.'}
@@ -114,37 +113,40 @@ export function MortgageList({
   return (
     <div className="flex flex-col font-sans">
       {/* Table & Grid Header Bar */}
-      <div className="text-[13px] font-normal text-[#555555] mb-2 flex items-center justify-between px-0.5 select-none">
-        <h2 className="flex items-center gap-1.5 text-[13.5px] font-normal text-[#555555] m-0">
-          <Search className="w-4 h-4 text-[#777777]" />
-          <span>
+      <div className="text-xs font-medium text-slate-600 mb-3 flex flex-wrap items-center justify-between gap-2.5 px-0.5 select-none">
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 m-0">
+          <Search className="w-4 h-4 text-sky-700 shrink-0" />
+          <span className="tabular-nums">
             {isSpanish
               ? `Mostrando Directorio de Hipotecas (${records.length.toLocaleString()} cuentas)`
               : `Showing Mortgagee Accounts (${records.length.toLocaleString()} records)`}
           </span>
         </h2>
 
-        {/* Export CSV & View Mode Toggle */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => exportMortgageesCsv(records)}
-            className="qq-btn-secondary text-[11.5px] py-1 px-2.5 flex items-center gap-1 font-bold text-[#0066c0] border-[#0066c0]/30 hover:bg-[#0066c0]/10 cursor-pointer shadow-2xs"
-            title="Download complete mortgagee directory CSV for offline reference"
-          >
-            <Download className="w-3.5 h-3.5 text-[#0066c0]" />
-            <span className="hidden sm:inline">Export Full Lender Directory (CSV)</span>
-            <span className="sm:hidden">Export CSV</span>
-          </button>
+        {/* Export CSV (Admin Only) & View Mode Toggle */}
+        <div className="flex flex-wrap items-center gap-2">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => exportMortgageesCsv(records)}
+              className="h-8 px-3 rounded-lg bg-white hover:bg-slate-50 text-sky-700 border border-slate-200/90 hover:border-slate-300 text-xs flex items-center gap-1.5 font-semibold cursor-pointer shadow-2xs transition-all"
+              title="Download complete mortgagee directory CSV for offline reference"
+            >
+              <Download className="w-3.5 h-3.5 text-sky-700" />
+              <span className="hidden sm:inline">Export Full Lender Directory (CSV)</span>
+              <span className="sm:hidden">Export CSV</span>
+            </button>
+          )}
 
-          <div className="flex items-center bg-white border border-[#b0b0b0] rounded-[2px] p-0.5 shadow-2xs">
+          <div className="flex items-center bg-slate-100 border border-slate-200/80 rounded-lg p-0.5">
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`p-1 rounded-[2px] transition-colors cursor-pointer ${
+              aria-pressed={viewMode === 'table'}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 viewMode === 'table'
-                  ? 'bg-[#286090] text-white'
-                  : 'text-[#666666] hover:text-[#222222]'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Table View"
               aria-label="Table View"
@@ -154,10 +156,11 @@ export function MortgageList({
             <button
               type="button"
               onClick={() => setViewMode('cards')}
-              className={`p-1 rounded-[2px] transition-colors cursor-pointer ${
+              aria-pressed={viewMode === 'cards'}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 viewMode === 'cards'
-                  ? 'bg-[#286090] text-white'
-                  : 'text-[#666666] hover:text-[#222222]'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Cards View"
               aria-label="Cards View"
@@ -170,7 +173,7 @@ export function MortgageList({
 
       {/* --- RENDER VIEW 1: CARDS GRID VIEW --- */}
       {viewMode === 'cards' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {paginatedRecords.map((record) => {
             const id = getRecordId(record);
             const isSelected = id === selectedId;
@@ -187,30 +190,30 @@ export function MortgageList({
               <div
                 key={id}
                 onClick={() => onSelect(id)}
-                className={`bg-white border rounded-[3px] p-3.5 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-3 relative ${
+                className={`bg-white border rounded-xl p-4 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-3.5 relative ${
                   isSelected
-                    ? 'border-[#286090] ring-1 ring-[#286090] bg-[#eaf2fa]'
-                    : 'border-[#d5d5d5] hover:border-[#999999]'
+                    ? 'border-sky-600 ring-2 ring-sky-500/20 bg-sky-50/30'
+                    : 'border-slate-200/90 hover:border-slate-300'
                 }`}
               >
                 <div>
-                  <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="flex items-start justify-between gap-2.5 mb-1.5">
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-normal text-[14px] text-[#286090] hover:underline leading-tight">
+                      <h3 className="font-bold text-[14px] text-slate-900 hover:text-sky-700 transition-colors leading-snug">
                         <HighlightedText text={record.Name || 'Unnamed Entity'} query={searchQuery} />
                       </h3>
                       {record.Name2 && (
-                        <p className="text-[12px] text-[#444444] mt-0.5 leading-snug">
+                        <p className="text-xs text-slate-600 mt-0.5 leading-snug line-clamp-2">
                           <HighlightedText text={record.Name2} query={searchQuery} />
                         </p>
                       )}
                     </div>
                     {/* Clause Badge */}
                     <span
-                      className={`shrink-0 px-2 py-0.5 rounded-[2px] text-[10px] font-bold tracking-wide uppercase border ${
+                      className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase border ${
                         isAuto
-                          ? 'bg-[#fff8e6] text-[#b45309] border-[#fde68a]'
-                          : 'bg-[#edf4ff] text-[#0052cc] border-[#b0d0ff]'
+                          ? 'bg-amber-50 text-amber-800 border-amber-200/90'
+                          : 'bg-sky-50 text-sky-800 border-sky-200/90'
                       }`}
                     >
                       {isAuto ? 'Auto / Loss Payee' : 'Mortgagee / ISAOA'}
@@ -218,66 +221,74 @@ export function MortgageList({
                   </div>
 
                   {/* Address */}
-                  {fullAddress && (
-                    <div className="flex items-center gap-1.5 text-[12px] text-[#666666] mt-2">
-                      <MapPin className="w-3.5 h-3.5 text-[#888888] shrink-0" />
-                      <span className="truncate">
+                  {fullAddress ? (
+                    <div className="flex items-start gap-1.5 text-xs text-slate-500 mt-2">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                      <span className="line-clamp-2">
                         <HighlightedText text={fullAddress} query={searchQuery} />
                       </span>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-400 italic mt-2">
+                      No mailing address on file
                     </div>
                   )}
 
                   {/* Phone & FAX with CopyableContact */}
-                  <div className="mt-2.5 pt-2 border-t border-[#f0f0f0] grid grid-cols-2 gap-2 text-[12px]">
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 grid grid-cols-2 gap-2.5 text-xs">
                     <div>
-                      <span className="text-[10.5px] text-[#777777] block font-semibold mb-0.5">Primary Phone</span>
+                      <span className="text-[10.5px] text-slate-400 uppercase tracking-wider block font-semibold mb-0.5">
+                        Primary Phone
+                      </span>
                       <CopyableContact value={primaryPhone} type="phone" />
                     </div>
 
                     <div>
-                      <span className="text-[10.5px] text-[#777777] block font-semibold mb-0.5">FAX</span>
+                      <span className="text-[10.5px] text-slate-400 uppercase tracking-wider block font-semibold mb-0.5">
+                        FAX
+                      </span>
                       <CopyableContact value={record.FAX} type="fax" />
                     </div>
                   </div>
                 </div>
 
-                {/* Card Action Buttons: Online Portal first, then Email, vCard, Suggest Edit, View */}
+                {/* Card Action Buttons: Online Portal, Email, vCard, Suggest Edit, Quick View, Share */}
                 <div
-                  className="mt-1 pt-2 border-t border-[#e5e5e5] flex flex-wrap items-center gap-1.5"
+                  className="pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-1.5"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* 1. Online Portal Button First */}
+                  {/* 1. Online Portal Button */}
                   {hasPortal ? (
                     <a
                       href={sanitizeUrl(record.Online)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="qq-btn-secondary text-[11.5px] py-1 px-2.5 flex items-center gap-1 text-[#286090] font-bold cursor-pointer shadow-2xs"
+                      className="py-1 px-2.5 rounded-lg bg-sky-50 hover:bg-sky-100/80 text-sky-800 border border-sky-200/90 text-xs flex items-center gap-1 font-semibold cursor-pointer transition-colors"
                     >
-                      <Globe className="w-3.5 h-3.5 text-[#286090]" />
+                      <Globe className="w-3.5 h-3.5 text-sky-700" />
                       <span>Online Portal</span>
                       <ExternalLink className="w-2.5 h-2.5 opacity-70" />
                     </a>
                   ) : (
-                    <span className="text-[11px] text-[#aaa] py-1 px-2 border border-[#e5e5e5] rounded-[2px] bg-[#fcfcfc] inline-flex items-center gap-1">
-                      <Globe className="w-3.5 h-3.5 text-[#ccc]" />
+                    <span className="text-[11px] text-slate-400 py-1 px-2 border border-slate-200/70 rounded-lg bg-slate-50/70 inline-flex items-center gap-1">
+                      <Globe className="w-3.5 h-3.5 text-slate-300" />
                       <span>No Portal</span>
                     </span>
                   )}
 
-                  {/* 2. Email Button Second */}
+                  {/* 2. Email Button */}
                   {hasEmail ? (
                     <button
                       type="button"
                       onClick={() => onEmailDocs && onEmailDocs(record)}
-                      className="qq-btn-secondary text-[11.5px] py-1 px-2.5 flex items-center gap-1 cursor-pointer font-bold text-[#286090] shadow-2xs"
+                      className="py-1 px-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs flex items-center gap-1 cursor-pointer font-semibold shadow-2xs transition-colors"
                     >
-                      <Mail className="w-3.5 h-3.5 text-[#286090]" />
+                      <Mail className="w-3.5 h-3.5 text-sky-700" />
                       <span>Email</span>
                     </button>
                   ) : (
-                    <span className="text-[11px] text-[#aaa] py-1 px-2 border border-[#e5e5e5] rounded-[2px] bg-[#fcfcfc] inline-flex items-center gap-1">
-                      <Mail className="w-3.5 h-3.5 text-[#ccc]" />
+                    <span className="text-[11px] text-slate-400 py-1 px-2 border border-slate-200/70 rounded-lg bg-slate-50/70 inline-flex items-center gap-1">
+                      <Mail className="w-3.5 h-3.5 text-slate-300" />
                       <span>No Email</span>
                     </span>
                   )}
@@ -289,10 +300,10 @@ export function MortgageList({
                       e.stopPropagation();
                       downloadVCard(record);
                     }}
-                    className="qq-btn-secondary text-[11.5px] py-1 px-2 flex items-center gap-1 font-bold text-[#0066c0] cursor-pointer"
+                    className="py-1 px-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs flex items-center gap-1 font-semibold cursor-pointer transition-colors"
                     title="Download vCard contact file (.vcf)"
                   >
-                    <Download className="w-3.5 h-3.5 text-[#0066c0]" />
+                    <Download className="w-3.5 h-3.5 text-slate-500" />
                     <span>vCard</span>
                   </button>
 
@@ -304,29 +315,30 @@ export function MortgageList({
                         e.stopPropagation();
                         onSuggestCorrection(record);
                       }}
-                      className="qq-btn-secondary text-[11.5px] py-1 px-2 flex items-center gap-1 font-bold text-[#286090] cursor-pointer"
+                      className="py-1 px-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs flex items-center gap-1 font-semibold cursor-pointer transition-colors"
                       title="Suggest edit or report data correction for this lender"
                     >
-                      <MessageSquarePlus className="w-3.5 h-3.5 text-[#286090]" />
+                      <MessageSquarePlus className="w-3.5 h-3.5 text-slate-500" />
                       <span>Suggest Edit</span>
                     </button>
                   )}
 
-                  {/* 5. View Details */}
+                  {/* 5. Quick View Details */}
                   <button
                     type="button"
                     onClick={() => onSelect(id)}
-                    className="qq-btn-secondary text-[11.5px] py-1 px-2 flex items-center gap-1 font-bold cursor-pointer ml-auto"
+                    className="py-1 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs flex items-center gap-1 font-semibold cursor-pointer ml-auto transition-colors"
                   >
-                    <Eye className="w-3.5 h-3.5 text-[#286090]" />
-                    <span>View</span>
+                    <Eye className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Quick View</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={(e) => handleShareRecord(e, record)}
-                    className="p-1 rounded text-[#666666] hover:text-[#286090] hover:bg-[#f0f0f0] cursor-pointer"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer transition-colors"
                     title="Copy direct share link"
+                    aria-label="Copy direct share link"
                   >
                     <Share2 className="w-3.5 h-3.5" />
                   </button>
@@ -337,7 +349,7 @@ export function MortgageList({
                         <button
                           type="button"
                           onClick={() => onEdit(record)}
-                          className="p-1 rounded text-amber-700 hover:bg-amber-50 cursor-pointer"
+                          className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 cursor-pointer transition-colors"
                           title="Edit Record"
                         >
                           <Edit className="w-3.5 h-3.5" />
@@ -347,7 +359,7 @@ export function MortgageList({
                         <button
                           type="button"
                           onClick={() => onDuplicate(record)}
-                          className="p-1 rounded text-emerald-700 hover:bg-emerald-50 cursor-pointer"
+                          className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 cursor-pointer transition-colors"
                           title="Duplicate & Edit Record"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -361,7 +373,7 @@ export function MortgageList({
                               onDelete(id);
                             }
                           }}
-                          className="p-1 rounded text-rose-700 hover:bg-rose-50 cursor-pointer"
+                          className="p-1.5 rounded-lg text-rose-700 hover:bg-rose-50 cursor-pointer transition-colors"
                           title="Delete Record"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -376,28 +388,28 @@ export function MortgageList({
         </div>
       ) : (
         /* --- RENDER VIEW 2: TABLE DATA GRID --- */
-        <div className="bg-white border border-[#d5d5d5] rounded-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+        <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[750px] font-sans">
+            <table className="w-full text-left border-collapse min-w-[760px] font-sans">
               <caption className="sr-only">
                 Mortgagee Clause Directory and Insurance Tracking Loss Payee Lookup
               </caption>
 
               <thead>
-                <tr className="qq-table-head select-none border-b border-[#d5d5d5]">
-                  <th scope="col" className={`${compactView ? 'px-3 py-1.5' : 'px-4 py-2.5'} w-[42%] text-[#222222] font-bold text-[12.5px]`}>
-                    {isSpanish ? 'Contacto / Dirección' : 'Contact / Address'}
+                <tr className="bg-slate-50/90 select-none border-b border-slate-200/90 text-slate-600 text-xs uppercase tracking-wider font-semibold">
+                  <th scope="col" className={`${compactView ? 'px-3.5 py-2.5' : 'px-4 py-3'} w-[44%]`}>
+                    {isSpanish ? 'Prestamista / Cláusula y Dirección' : 'Lender / Clause & Address'}
                   </th>
-                  <th scope="col" className={`${compactView ? 'px-2.5 py-1.5' : 'px-3 py-2.5'} w-[28%] text-[#222222] font-bold text-[12.5px]`}>
-                    {isSpanish ? 'Teléfono Principal & FAX' : 'Primary Phone & FAX'}
+                  <th scope="col" className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3'} w-[26%]`}>
+                    {isSpanish ? 'Teléfono Principal y FAX' : 'Primary Phone & FAX'}
                   </th>
-                  <th scope="col" className={`${compactView ? 'px-2.5 py-1.5' : 'px-3 py-2.5'} w-[30%] text-[#222222] font-bold text-[12.5px]`}>
-                    {isSpanish ? 'Portal en Línea & Correo' : 'Online Portal & Email'}
+                  <th scope="col" className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3'} w-[30%]`}>
+                    {isSpanish ? 'Portal en Línea y Correo' : 'Online Portal & Email'}
                   </th>
                 </tr>
               </thead>
 
-              <tbody className={`divide-y divide-[#e8e8e8] ${compactView ? 'text-[12px]' : 'text-[12.5px]'}`}>
+              <tbody className={`divide-y divide-slate-200/75 ${compactView ? 'text-xs' : 'text-[13px]'}`}>
                 {paginatedRecords.map((record) => {
                   const id = getRecordId(record);
                   const isSelected = id === selectedId;
@@ -417,22 +429,22 @@ export function MortgageList({
                       onClick={() => onSelect(id)}
                       className={`cursor-pointer transition-colors group ${
                         isSelected
-                          ? 'qq-row-selected'
-                          : 'qq-row-zebra bg-white'
+                          ? 'bg-sky-50/80 shadow-[inset_3px_0_0_0_#0284c7]'
+                          : 'bg-white hover:bg-slate-50/90'
                       }`}
                     >
                       {/* Column 1: Contact Name & Address */}
-                      <td className={`${compactView ? 'px-3 py-1.5' : 'px-4 py-3'} align-top`}>
+                      <td className={`${compactView ? 'px-3.5 py-2.5' : 'px-4 py-3.5'} align-top`}>
                         <div className="min-w-0 pr-2">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[#286090] group-hover:underline font-normal text-[13.5px] leading-snug">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-slate-900 group-hover:text-sky-700 font-bold text-[13.5px] leading-snug transition-colors">
                               <HighlightedText text={record.Name || 'Unnamed Entity'} query={searchQuery} />
                             </span>
                             <span
-                              className={`px-1.5 py-0.2 rounded-[2px] text-[9.5px] font-bold tracking-wide uppercase border ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase border ${
                                 isAuto
-                                  ? 'bg-[#fff8e6] text-[#b45309] border-[#fde68a]'
-                                  : 'bg-[#edf4ff] text-[#0052cc] border-[#b0d0ff]'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200/90'
+                                  : 'bg-sky-50 text-sky-800 border-sky-200/90'
                               }`}
                             >
                               {isAuto ? 'Auto / Loss Payee' : 'Mortgagee'}
@@ -440,29 +452,30 @@ export function MortgageList({
                           </div>
 
                           {record.Name2 && (
-                            <div className="text-[12px] text-[#444444] truncate max-w-sm mt-0.5">
+                            <div className="text-xs text-slate-600 truncate max-w-xl lg:max-w-2xl xl:max-w-none mt-0.5">
                               <HighlightedText text={record.Name2} query={searchQuery} />
                             </div>
                           )}
 
                           {fullAddress ? (
-                            <div className="text-[12px] text-[#666666] truncate max-w-sm mt-0.5">
+                            <div className="text-xs text-slate-500 truncate max-w-xl lg:max-w-2xl xl:max-w-none mt-0.5">
                               <HighlightedText text={fullAddress} query={searchQuery} />
                             </div>
                           ) : (
-                            <div className="text-[11px] text-[#999999] italic mt-0.5">
+                            <div className="text-[11px] text-slate-400 italic mt-0.5">
                               No address on file
                             </div>
                           )}
 
                           {/* Quick Actions toolbar */}
-                          <div className="mt-1 flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="mt-2 flex items-center gap-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={() => onSelect(id)}
-                              className="text-[#286090] hover:underline text-[11.5px] font-bold cursor-pointer"
+                              className="text-sky-700 hover:text-sky-900 hover:underline text-[11.5px] font-semibold cursor-pointer inline-flex items-center gap-1"
                             >
-                              Quick View
+                              <Eye className="w-3 h-3" />
+                              <span>Quick View</span>
                             </button>
                             <button
                               type="button"
@@ -470,10 +483,10 @@ export function MortgageList({
                                 e.stopPropagation();
                                 downloadVCard(record);
                               }}
-                              className="text-[#0066c0] hover:underline text-[11px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                              className="text-slate-600 hover:text-slate-900 hover:underline text-[11.5px] font-medium cursor-pointer inline-flex items-center gap-1"
                               title="Download vCard (.vcf) contact file for Outlook"
                             >
-                              <Download className="w-3 h-3 text-[#0066c0]" />
+                              <Download className="w-3 h-3 text-slate-400" />
                               <span>vCard</span>
                             </button>
                             {onSuggestCorrection && (
@@ -483,20 +496,20 @@ export function MortgageList({
                                   e.stopPropagation();
                                   onSuggestCorrection(record);
                                 }}
-                                className="text-[#286090] hover:underline text-[11px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                className="text-slate-600 hover:text-slate-900 hover:underline text-[11.5px] font-medium cursor-pointer inline-flex items-center gap-1"
                                 title="Suggest edit or report correction"
                               >
-                                <MessageSquarePlus className="w-3 h-3 text-[#286090]" />
+                                <MessageSquarePlus className="w-3 h-3 text-slate-400" />
                                 <span>Suggest Edit</span>
                               </button>
                             )}
                             <button
                               type="button"
                               onClick={(e) => handleShareRecord(e, record)}
-                              className="text-[#666666] hover:text-[#286090] text-[11px] cursor-pointer inline-flex items-center gap-0.5"
+                              className="text-slate-500 hover:text-slate-900 hover:underline text-[11.5px] font-medium cursor-pointer inline-flex items-center gap-1"
                               title="Copy direct share link"
                             >
-                              <Share2 className="w-3 h-3" />
+                              <Share2 className="w-3 h-3 text-slate-400" />
                               <span>Share</span>
                             </button>
                             {isAdmin && (
@@ -505,10 +518,10 @@ export function MortgageList({
                                   <button
                                     type="button"
                                     onClick={() => onEdit(record)}
-                                    className="text-[#286090] hover:underline text-[11px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                    className="text-amber-700 hover:underline text-[11.5px] font-semibold cursor-pointer inline-flex items-center gap-1"
                                     title="Edit Record"
                                   >
-                                    <Edit className="w-3 h-3 text-[#286090]" />
+                                    <Edit className="w-3 h-3 text-amber-600" />
                                     <span>Edit</span>
                                   </button>
                                 )}
@@ -516,10 +529,10 @@ export function MortgageList({
                                   <button
                                     type="button"
                                     onClick={() => onDuplicate(record)}
-                                    className="text-[#1e7e34] hover:underline text-[11px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                    className="text-emerald-700 hover:underline text-[11.5px] font-semibold cursor-pointer inline-flex items-center gap-1"
                                     title="Duplicate & Edit Record"
                                   >
-                                    <Copy className="w-3 h-3 text-[#1e7e34]" />
+                                    <Copy className="w-3 h-3 text-emerald-600" />
                                     <span>Duplicate & Edit</span>
                                   </button>
                                 )}
@@ -531,7 +544,7 @@ export function MortgageList({
                                         onDelete(id);
                                       }
                                     }}
-                                    className="text-rose-600 hover:underline text-[11px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                    className="text-rose-600 hover:underline text-[11.5px] font-semibold cursor-pointer inline-flex items-center gap-1"
                                     title="Delete Record"
                                   >
                                     <Trash2 className="w-3 h-3 text-rose-600" />
@@ -545,21 +558,25 @@ export function MortgageList({
                       </td>
 
                       {/* Column 2: Primary Phone & FAX with CopyableContact */}
-                      <td className={`${compactView ? 'px-2.5 py-1.5' : 'px-3 py-3'} align-top`}>
-                        <div className="space-y-1 min-w-0 pr-1">
+                      <td className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3.5'} align-top`}>
+                        <div className="space-y-1.5 min-w-0 pr-1">
                           <div>
-                            <span className="text-[10px] text-[#777777] block font-semibold mb-0.5">Primary Phone</span>
+                            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold mb-0.5">
+                              Primary Phone
+                            </span>
                             <CopyableContact value={primaryPhone} type="phone" />
                           </div>
-                          <div className="pt-0.5">
-                            <span className="text-[10px] text-[#777777] block font-semibold mb-0.5">FAX</span>
+                          <div>
+                            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold mb-0.5">
+                              FAX
+                            </span>
                             <CopyableContact value={record.FAX} type="fax" />
                           </div>
                         </div>
                       </td>
 
                       {/* Column 3: Online Portal Button First, then Email Button */}
-                      <td className={`${compactView ? 'px-2.5 py-1.5' : 'px-3 py-3'} align-top`}>
+                      <td className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3.5'} align-top`}>
                         <div className="flex flex-wrap items-center gap-2">
                           {/* 1. Online Portal Button First */}
                           {hasPortal ? (
@@ -568,15 +585,15 @@ export function MortgageList({
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="qq-btn-secondary text-[11.5px] py-1 px-2.5 inline-flex items-center gap-1 text-[#286090] font-bold shadow-2xs"
+                              className="py-1.5 px-3 rounded-lg bg-sky-50 hover:bg-sky-100/80 text-sky-800 border border-sky-200/90 text-xs inline-flex items-center gap-1.5 font-semibold transition-colors"
                             >
-                              <Globe className="w-3.5 h-3.5 text-[#286090]" />
+                              <Globe className="w-3.5 h-3.5 text-sky-700" />
                               <span>Online Portal</span>
                               <ExternalLink className="w-2.5 h-2.5 opacity-70" />
                             </a>
                           ) : (
-                            <span className="text-[11px] text-[#aaa] py-1 px-2 border border-[#e5e5e5] rounded-[2px] bg-[#fafafa] inline-flex items-center gap-1">
-                              <Globe className="w-3.5 h-3.5 text-[#ccc]" />
+                            <span className="text-xs text-slate-400 py-1.5 px-2.5 border border-slate-200/70 rounded-lg bg-slate-50/70 inline-flex items-center gap-1.5">
+                              <Globe className="w-3.5 h-3.5 text-slate-300" />
                               <span>No Portal</span>
                             </span>
                           )}
@@ -589,14 +606,14 @@ export function MortgageList({
                                 e.stopPropagation();
                                 if (onEmailDocs) onEmailDocs(record);
                               }}
-                              className="qq-btn-secondary text-[11.5px] py-1 px-2.5 inline-flex items-center gap-1 text-[#286090] font-bold cursor-pointer shadow-2xs"
+                              className="py-1.5 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs inline-flex items-center gap-1.5 font-semibold cursor-pointer shadow-2xs transition-colors"
                             >
-                              <Mail className="w-3.5 h-3.5 text-[#286090]" />
+                              <Mail className="w-3.5 h-3.5 text-sky-700" />
                               <span>Email</span>
                             </button>
                           ) : (
-                            <span className="text-[11px] text-[#aaa] py-1 px-2 border border-[#e5e5e5] rounded-[2px] bg-[#fafafa] inline-flex items-center gap-1">
-                              <Mail className="w-3.5 h-3.5 text-[#ccc]" />
+                            <span className="text-xs text-slate-400 py-1.5 px-2.5 border border-slate-200/70 rounded-lg bg-slate-50/70 inline-flex items-center gap-1.5">
+                              <Mail className="w-3.5 h-3.5 text-slate-300" />
                               <span>No Email</span>
                             </span>
                           )}
@@ -610,16 +627,16 @@ export function MortgageList({
           </div>
 
           {/* Pagination & Status Footer Bar */}
-          <div className="bg-[#f8f9fa] border border-[#d5d5d5] rounded-[3px] px-3.5 py-2 mt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-[#555555] shadow-xs">
-            <div className="flex items-center gap-2">
-              <div>
-                Showing <strong className="text-[#222222] font-bold">{startIdx.toLocaleString()}</strong>–
-                <strong className="text-[#222222] font-bold">{endIdx.toLocaleString()}</strong> of{' '}
-                <strong className="text-[#222222] font-bold">{records.length.toLocaleString()}</strong> accounts
+          <div className="bg-slate-50/80 border-t border-slate-200/90 px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+            <div className="flex items-center gap-2.5">
+              <div className="tabular-nums">
+                Showing <strong className="text-slate-900 font-semibold">{startIdx.toLocaleString()}</strong>–
+                <strong className="text-slate-900 font-semibold">{endIdx.toLocaleString()}</strong> of{' '}
+                <strong className="text-slate-900 font-semibold">{records.length.toLocaleString()}</strong> accounts
               </div>
 
               {/* Page Size Selector */}
-              <div className="flex items-center gap-1 ml-2 text-[11px] text-[#666]">
+              <div className="flex items-center gap-1.5 ml-2 text-xs text-slate-500">
                 <label htmlFor="mortgage-page-size" className="hidden md:inline">Per page:</label>
                 <select
                   id="mortgage-page-size"
@@ -628,7 +645,7 @@ export function MortgageList({
                     setPageSize(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="bg-white border border-[#b0b0b0] rounded-[2px] px-1 py-0.5 text-[11px] text-[#333] cursor-pointer"
+                  className="bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 font-medium cursor-pointer focus:outline-hidden focus:border-sky-600"
                 >
                   <option value={25}>25</option>
                   <option value={50}>50</option>
@@ -640,7 +657,7 @@ export function MortgageList({
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center gap-1 select-none">
+              <div className="flex items-center gap-1.5 select-none">
                 <button
                   type="button"
                   onClick={() => {
@@ -648,7 +665,7 @@ export function MortgageList({
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   disabled={currentPage === 1}
-                  className="px-2 py-0.5 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer font-bold text-[11px] text-[#333333]"
+                  className="px-2.5 py-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold text-xs text-slate-700 transition-colors"
                 >
                   « First
                 </button>
@@ -659,13 +676,13 @@ export function MortgageList({
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   disabled={currentPage === 1}
-                  className="p-1 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer"
+                  className="p-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer transition-colors"
                   title="Previous Page"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
 
-                <span className="px-2 py-0.5 text-[11.5px] font-bold text-[#222222]">
+                <span className="px-2 py-0.5 text-xs font-semibold text-slate-800 tabular-nums">
                   Page {currentPage} of {totalPages}
                 </span>
 
@@ -676,7 +693,7 @@ export function MortgageList({
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   disabled={currentPage >= totalPages}
-                  className="p-1 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer"
+                  className="p-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer transition-colors"
                   title="Next Page"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -688,7 +705,7 @@ export function MortgageList({
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   disabled={currentPage >= totalPages}
-                  className="px-2 py-0.5 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer font-bold text-[11px] text-[#333333]"
+                  className="px-2.5 py-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold text-xs text-slate-700 transition-colors"
                 >
                   Last »
                 </button>
@@ -698,7 +715,7 @@ export function MortgageList({
             <div className="hidden sm:flex items-center gap-3">
               <button
                 type="button"
-                className="text-[#286090] hover:underline cursor-pointer bg-transparent border-0 p-0 font-bold"
+                className="text-sky-700 hover:text-sky-900 hover:underline cursor-pointer bg-transparent border-0 p-0 font-semibold"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
                 Back to top ↑
@@ -710,14 +727,14 @@ export function MortgageList({
 
       {/* Pagination for Card View */}
       {viewMode === 'cards' && totalPages > 1 && (
-        <div className="bg-[#f8f9fa] border border-[#d5d5d5] rounded-[3px] px-3.5 py-2 mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-[#555555] shadow-xs">
-          <div>
-            Showing <strong className="text-[#222222] font-bold">{startIdx.toLocaleString()}</strong>–
-            <strong className="text-[#222222] font-bold">{endIdx.toLocaleString()}</strong> of{' '}
-            <strong className="text-[#222222] font-bold">{records.length.toLocaleString()}</strong> accounts
+        <div className="bg-white border border-slate-200/90 rounded-xl px-4 py-2.5 mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs">
+          <div className="tabular-nums">
+            Showing <strong className="text-slate-900 font-semibold">{startIdx.toLocaleString()}</strong>–
+            <strong className="text-slate-900 font-semibold">{endIdx.toLocaleString()}</strong> of{' '}
+            <strong className="text-slate-900 font-semibold">{records.length.toLocaleString()}</strong> accounts
           </div>
 
-          <div className="flex items-center gap-1 select-none">
+          <div className="flex items-center gap-1.5 select-none">
             <button
               type="button"
               onClick={() => {
@@ -725,7 +742,7 @@ export function MortgageList({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === 1}
-              className="px-2 py-0.5 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer font-bold text-[11px] text-[#333333]"
+              className="px-2.5 py-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold text-xs text-slate-700 transition-colors"
             >
               « First
             </button>
@@ -736,11 +753,11 @@ export function MortgageList({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === 1}
-              className="p-1 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer"
+              className="p-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer transition-colors"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-            <span className="px-2 py-0.5 text-[11.5px] font-bold text-[#222222]">
+            <span className="px-2 py-0.5 text-xs font-semibold text-slate-800 tabular-nums">
               Page {currentPage} of {totalPages}
             </span>
             <button
@@ -750,7 +767,7 @@ export function MortgageList({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage >= totalPages}
-              className="p-1 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer"
+              className="p-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer transition-colors"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -761,7 +778,7 @@ export function MortgageList({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage >= totalPages}
-              className="px-2 py-0.5 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer font-bold text-[11px] text-[#333333]"
+              className="px-2.5 py-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold text-xs text-slate-700 transition-colors"
             >
               Last »
             </button>

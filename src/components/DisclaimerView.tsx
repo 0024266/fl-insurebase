@@ -73,7 +73,7 @@ Ni el autor, mantenedor o anfitrión asume responsabilidad legal u obligación p
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto my-4 sm:my-6 px-3 sm:px-4 text-[#222]">
+    <div className="w-full my-2 sm:my-4 text-[#222]">
       {/* Quick Navigation / Breadcrumb Header */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2 text-neutral-600">

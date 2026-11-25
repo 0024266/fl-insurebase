@@ -694,7 +694,7 @@ function DirectoryApp() {
       setIsQuickViewOpen(true);
       mortgage.addToast(
         isCarrierDuplicate ? 'Carrier Duplicated & Saved' : 'Carrier Record Added',
-        `${data.Carrier} saved to Insurance Carriers directory.`,
+        `${data.Carrier} saved to Carrier Shortcuts directory.`,
         'success'
       );
     } else {
@@ -820,7 +820,7 @@ function DirectoryApp() {
       : 'text-[12.5px]';
 
   return (
-    <div className={`min-h-screen bg-[#f4f5f7] flex flex-col font-sans antialiased text-[#222] ${fontScaleClass}`}>
+    <div className={`min-h-screen w-full max-w-full overflow-x-hidden bg-[#f4f5f7] flex flex-col font-sans antialiased text-[#222] ${fontScaleClass}`}>
       {/* 1. Universal Enterprise Top Navigation Header (with integrated View & Display Settings) */}
       <Header
         activeTab={activeTab}
@@ -842,10 +842,10 @@ function DirectoryApp() {
 
       {/* Admin Mode Active Banner Bar */}
       {isAdmin && (
-        <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 text-neutral-950 px-4 py-1.5 border-b border-amber-600/80 shadow-xs flex items-center justify-between gap-3 text-[12px] font-semibold">
-          <div className="flex items-center gap-2 max-w-[1850px] mx-auto w-full justify-between flex-wrap">
+        <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 text-neutral-950 py-1.5 border-b border-amber-600/80 shadow-xs flex items-center justify-between gap-3 text-[12px] font-semibold w-full">
+          <div className="flex items-center gap-2 w-full px-3 sm:px-5 lg:px-8 justify-between flex-wrap">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-neutral-950" />
+              <ShieldCheck className="w-4 h-4 text-neutral-950 shrink-0" />
               <span>
                 {isSpanish
                   ? 'Modo Administrador Activo — Edición, duplicación, adiciones y gestión habilitadas'
@@ -902,7 +902,7 @@ function DirectoryApp() {
       )}
 
       {/* 3. Main Workspace Body Canvas */}
-      <main className="flex-1 max-w-[1850px] w-full mx-auto p-2.5 sm:p-4 flex flex-col">
+      <main className="flex-1 w-full max-w-full px-3 sm:px-5 lg:px-8 py-3 sm:py-4 flex flex-col min-w-0">
         {activeTab === 'disclaimer' ? (
           /* View 3: Dedicated Disclaimer View */
           <DisclaimerView
@@ -960,10 +960,10 @@ function DirectoryApp() {
             </div>
           </>
         ) : activeTab === 'carriers' ? (
-          /* View 3: Insurance Carriers Directory */
+          /* View 3: Carrier Shortcuts Directory */
           <>
             <h1 className="sr-only">
-              Insurance Carriers Directory — Payments, Agent Portals, Claims & Customer Service
+              Carrier Shortcuts Directory — Payments, Agent Portals, Claims & Customer Service
             </h1>
 
             <CarrierFilterBar
@@ -1061,6 +1061,61 @@ function DirectoryApp() {
           </>
         )}
       </main>
+
+      {/* 4. Clean Modern Workspace Footer with Legal Disclaimer Link */}
+      <footer className="w-full border-t border-slate-200/80 bg-white/90 py-3.5 px-3 sm:px-5 lg:px-8 text-xs text-slate-500 select-none">
+        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+            <span className="font-semibold text-slate-700">FL InsureBase</span>
+            <span>•</span>
+            <span>
+              {isSpanish
+                ? 'Directorio Operativo de Seguros de Florida'
+                : 'Florida Insurance Operations Hub'}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => handleTabChange('mortgages')}
+              className={`cursor-pointer transition-colors hover:text-slate-900 ${
+                activeTab === 'mortgages' ? 'text-sky-700 font-semibold' : ''
+              }`}
+            >
+              {t('tabMortgages')}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('property')}
+              className={`cursor-pointer transition-colors hover:text-slate-900 ${
+                activeTab === 'property' ? 'text-sky-700 font-semibold' : ''
+              }`}
+            >
+              {t('tabPermits')}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('carriers')}
+              className={`cursor-pointer transition-colors hover:text-slate-900 ${
+                activeTab === 'carriers' ? 'text-sky-700 font-semibold' : ''
+              }`}
+            >
+              {isSpanish ? 'Accesos de Aseguradoras' : 'Carrier Shortcuts'}
+            </button>
+            <span className="text-slate-300">|</span>
+            <button
+              type="button"
+              onClick={() => handleTabChange('disclaimer')}
+              className={`cursor-pointer transition-colors hover:text-slate-900 font-medium ${
+                activeTab === 'disclaimer' ? 'text-sky-700 font-semibold underline' : 'text-slate-600'
+              }`}
+            >
+              {t('tabDisclaimer')}
+            </button>
+          </div>
+        </div>
+      </footer>
 
       {/* --- In-Page QuickView Modal --- */}
       {activeTab === 'mortgages' && (

@@ -13,7 +13,11 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Building2
+  Building2,
+  Search,
+  Eye,
+  LayoutGrid,
+  Table as TableIcon
 } from 'lucide-react';
 import { CarrierRecord } from '../types/carrier';
 import {
@@ -56,7 +60,7 @@ export function CarrierList({
   onToast
 }: CarrierListProps) {
   const { isSpanish, language } = useLanguage();
-  const { viewMode } = usePreferences();
+  const { viewMode, setViewMode, compactView } = usePreferences();
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(50);
 
@@ -101,14 +105,14 @@ export function CarrierList({
 
   if (records.length === 0) {
     return (
-      <div className="bg-white border border-[#d5d5d5] rounded-[3px] p-10 text-center shadow-2xs">
-        <Building2 className="w-10 h-10 text-[#999999] mx-auto mb-2" />
-        <h3 className="text-[15px] font-bold text-[#333333]">
+      <div className="bg-white border border-slate-200/90 rounded-xl p-10 text-center text-slate-600 shadow-2xs">
+        <Building2 className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+        <h3 className="text-sm font-bold text-slate-900">
           {isSpanish
             ? 'No se encontraron aseguradoras con estos filtros'
-            : 'No matching insurance carriers found'}
+            : 'No Matching Carrier Shortcuts Found'}
         </h3>
-        <p className="text-[12.5px] text-[#666666] mt-1">
+        <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
           {isSpanish
             ? 'Intente buscar por otro nombre, línea de negocio o desactive los filtros activos.'
             : 'Try searching a different carrier name, alias, phone number, or clearing active LOB filters.'}
@@ -118,10 +122,55 @@ export function CarrierList({
   }
 
   return (
-    <div className="space-y-3">
-      {/* Mobile always renders cards; Desktop respects viewMode ('cards' vs 'table') */}
-      <div className={viewMode === 'cards' ? 'block' : 'block md:hidden'}>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+    <div className="flex flex-col font-sans">
+      {/* Table & Grid Header Bar */}
+      <div className="text-xs font-medium text-slate-600 mb-3 flex flex-wrap items-center justify-between gap-2.5 px-0.5 select-none">
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 m-0">
+          <Search className="w-4 h-4 text-sky-700 shrink-0" />
+          <span className="tabular-nums">
+            {isSpanish
+              ? `Mostrando Accesos de Aseguradoras (${records.length.toLocaleString()} registros)`
+              : `Showing Carrier Shortcuts (${records.length.toLocaleString()} carriers)`}
+          </span>
+        </h2>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center bg-slate-100 border border-slate-200/80 rounded-lg p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              aria-pressed={viewMode === 'table'}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Table View"
+              aria-label="Table View"
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('cards')}
+              aria-pressed={viewMode === 'cards'}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                viewMode === 'cards'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Cards View"
+              aria-label="Cards View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Cards View */}
+      {viewMode === 'cards' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {paginatedRecords.map((record) => (
             <CarrierCard
               key={record.id}
@@ -137,21 +186,19 @@ export function CarrierList({
             />
           ))}
         </div>
-      </div>
-
-      {/* Desktop Table View when viewMode === 'table' */}
-      {viewMode === 'table' && (
-        <div className="hidden md:block bg-white border border-[#d5d5d5] rounded-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+      ) : (
+        /* Table View (with responsive horizontal scroll container) */
+        <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px] font-sans">
+            <table className="w-full text-left border-collapse min-w-[860px] font-sans">
               <caption className="sr-only">
-                Insurance Carriers Directory — Payments, Agent Portals, Claims & Customer Service
+                Carrier Shortcuts Directory — Payments, Agent Portals, Claims & Customer Service
               </caption>
               <thead>
-                <tr className="qq-table-head select-none border-b border-[#d5d5d5]">
+                <tr className="bg-slate-50/90 select-none border-b border-slate-200/90 text-slate-600 text-xs uppercase tracking-wider font-semibold">
                   <th
                     scope="col"
-                    className="px-4 py-2.5 w-[36%] text-[#222222] font-bold text-[12.5px]"
+                    className={`${compactView ? 'px-3.5 py-2.5' : 'px-4 py-3'} w-[36%]`}
                   >
                     {isSpanish
                       ? 'Aseguradora / Líneas y Notas'
@@ -159,7 +206,7 @@ export function CarrierList({
                   </th>
                   <th
                     scope="col"
-                    className="px-3 py-2.5 w-[30%] text-[#222222] font-bold text-[12.5px]"
+                    className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3'} w-[30%]`}
                   >
                     {isSpanish
                       ? 'Servicio al Cliente, Reclamos y Agentes'
@@ -167,7 +214,7 @@ export function CarrierList({
                   </th>
                   <th
                     scope="col"
-                    className="px-3 py-2.5 w-[34%] text-[#222222] font-bold text-[12.5px]"
+                    className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3'} w-[34%]`}
                   >
                     {isSpanish
                       ? 'Pagos Directos, Portal y Cargo de Tarjeta'
@@ -176,7 +223,7 @@ export function CarrierList({
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-[#e8e8e8] text-[12.5px]">
+              <tbody className={`divide-y divide-slate-200/75 ${compactView ? 'text-xs' : 'text-[13px]'}`}>
                 {paginatedRecords.map((record) => {
                   const isSelected = record.id === selectedId;
                   const paymentUrl = normalizeCarrierUrl(record.Payments);
@@ -195,14 +242,16 @@ export function CarrierList({
                       key={record.id}
                       onClick={() => onSelect(record.id)}
                       className={`cursor-pointer transition-colors group ${
-                        isSelected ? 'qq-row-selected' : 'qq-row-zebra bg-white'
+                        isSelected
+                          ? 'bg-sky-50/80 shadow-[inset_3px_0_0_0_#0284c7]'
+                          : 'bg-white hover:bg-slate-50/90'
                       }`}
                     >
                       {/* Column 1: Carrier Name, Aliases, LOB Badges, Notes, Quick Actions */}
-                      <td className="px-4 py-3 align-top">
+                      <td className={`${compactView ? 'px-3.5 py-2.5' : 'px-4 py-3.5'} align-top`}>
                         <div className="min-w-0 pr-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[#286090] group-hover:underline font-bold text-[14px] leading-snug">
+                            <span className="text-slate-900 group-hover:text-sky-700 font-bold text-[14px] leading-snug transition-colors">
                               <HighlightedText
                                 text={record.Carrier}
                                 query={searchQuery}
@@ -212,7 +261,7 @@ export function CarrierList({
 
                           {record.OtherNames &&
                             record.OtherNames !== record.Carrier && (
-                              <div className="text-[11.5px] text-[#555555] mt-0.5">
+                              <div className="text-xs text-slate-500 mt-0.5">
                                 <HighlightedText
                                   text={record.OtherNames}
                                   query={searchQuery}
@@ -223,7 +272,7 @@ export function CarrierList({
                           <div className="mt-1.5">{renderLobBadges(record)}</div>
 
                           {noteLines.length > 0 && (
-                            <div className="mt-2 text-[11.5px] text-[#444444] bg-amber-50/60 border-l-2 border-amber-400 pl-2 py-1 space-y-0.5 max-w-xl">
+                            <div className="mt-2 text-xs text-slate-600 bg-amber-50/60 border-l-2 border-amber-400 pl-2.5 py-1 space-y-0.5 max-w-xl rounded-r-md">
                               {noteLines.slice(0, 2).map((line, idx) => (
                                 <div key={idx} className="leading-snug truncate">
                                   <HighlightedText
@@ -233,7 +282,7 @@ export function CarrierList({
                                 </div>
                               ))}
                               {noteLines.length > 2 && (
-                                <div className="text-[10.5px] text-[#286090] font-semibold">
+                                <div className="text-[10.5px] text-sky-700 font-semibold">
                                   +{noteLines.length - 2} more note line(s)
                                 </div>
                               )}
@@ -242,23 +291,24 @@ export function CarrierList({
 
                           {/* Row Action Links */}
                           <div
-                            className="mt-2 flex items-center gap-2.5 flex-wrap"
+                            className="mt-2 flex items-center gap-3 flex-wrap"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <button
                               type="button"
                               onClick={() => onSelect(record.id)}
-                              className="text-[#286090] hover:underline text-[11.5px] font-bold cursor-pointer"
+                              className="text-sky-700 hover:text-sky-900 hover:underline text-[11.5px] font-semibold cursor-pointer inline-flex items-center gap-1"
                             >
-                              Quick View
+                              <Eye className="w-3 h-3" />
+                              <span>Quick View</span>
                             </button>
                             <button
                               type="button"
                               onClick={(e) => handleShareRecord(e, record)}
-                              className="text-[#666666] hover:text-[#286090] text-[11px] cursor-pointer inline-flex items-center gap-0.5"
+                              className="text-slate-500 hover:text-slate-900 hover:underline text-[11.5px] font-medium cursor-pointer inline-flex items-center gap-1"
                               title="Copy direct share link"
                             >
-                              <Share2 className="w-3 h-3" />
+                              <Share2 className="w-3 h-3 text-slate-400" />
                               <span>Share</span>
                             </button>
 
@@ -268,7 +318,7 @@ export function CarrierList({
                                   <button
                                     type="button"
                                     onClick={() => onEdit(record)}
-                                    className="text-[#286090] hover:underline text-[11px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                    className="text-amber-700 hover:underline text-[11.5px] font-semibold cursor-pointer inline-flex items-center gap-1"
                                     title="Edit Carrier"
                                   >
                                     <Edit2 className="w-3 h-3" />
@@ -279,7 +329,7 @@ export function CarrierList({
                                   <button
                                     type="button"
                                     onClick={() => onDuplicate(record)}
-                                    className="text-[#1e7e34] hover:underline text-[11px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                    className="text-emerald-700 hover:underline text-[11.5px] font-semibold cursor-pointer inline-flex items-center gap-1"
                                     title="Duplicate & Edit Carrier"
                                   >
                                     <Copy className="w-3 h-3" />
@@ -298,7 +348,7 @@ export function CarrierList({
                                         onDelete(record.id);
                                       }
                                     }}
-                                    className="text-rose-600 hover:underline text-[11px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                    className="text-rose-600 hover:underline text-[11.5px] font-semibold cursor-pointer inline-flex items-center gap-1"
                                     title="Delete Carrier"
                                   >
                                     <Trash2 className="w-3 h-3" />
@@ -313,13 +363,13 @@ export function CarrierList({
 
                       {/* Column 2: Customer Service, Claims & Agent Phone/Email */}
                       <td
-                        className="px-3 py-3 align-top"
+                        className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3.5'} align-top`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="space-y-1.5 text-[12px]">
+                        <div className="space-y-1.5 text-xs">
                           {/* Customer Service */}
                           <div>
-                            <span className="text-[10.5px] font-bold text-[#666666] uppercase tracking-wider block">
+                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-0.5">
                               Customer Service
                             </span>
                             {record.CustomerServicePhone ? (
@@ -327,16 +377,16 @@ export function CarrierList({
                                 {csTel ? (
                                   <a
                                     href={csTel}
-                                    className="text-[#222222] hover:text-[#286090] hover:underline font-bold inline-flex items-center gap-1"
+                                    className="text-slate-800 hover:text-sky-700 hover:underline font-mono font-semibold inline-flex items-center gap-1"
                                   >
-                                    <Phone className="w-3 h-3 text-[#286090]" />
+                                    <Phone className="w-3 h-3 text-sky-700" />
                                     <HighlightedText
                                       text={record.CustomerServicePhone}
                                       query={searchQuery}
                                     />
                                   </a>
                                 ) : (
-                                  <span className="text-[#222222] font-bold">
+                                  <span className="text-slate-800 font-mono font-semibold">
                                     {record.CustomerServicePhone}
                                   </span>
                                 )}
@@ -348,21 +398,21 @@ export function CarrierList({
                                       record.CustomerServicePhone
                                     )
                                   }
-                                  className="p-0.5 text-[#777] hover:text-[#286090] cursor-pointer"
+                                  className="p-0.5 text-slate-400 hover:text-sky-700 cursor-pointer transition-colors"
                                   title="Copy Customer Service Phone"
                                 >
                                   <Copy className="w-3 h-3" />
                                 </button>
                               </div>
                             ) : (
-                              <span className="text-[#999999]">—</span>
+                              <span className="text-slate-400">—</span>
                             )}
                             {record.CustomerServiceEmail && (
                               <div className="flex items-center gap-1 mt-0.5">
                                 {csMail ? (
                                   <a
                                     href={csMail}
-                                    className="text-[#286090] hover:underline text-[11.5px] inline-flex items-center gap-1 truncate max-w-[230px]"
+                                    className="text-sky-700 hover:underline text-[11.5px] inline-flex items-center gap-1 truncate max-w-[230px]"
                                   >
                                     <Mail className="w-3 h-3 shrink-0" />
                                     <span className="truncate">
@@ -373,7 +423,7 @@ export function CarrierList({
                                     </span>
                                   </a>
                                 ) : (
-                                  <span className="text-[11.5px] text-[#444]">
+                                  <span className="text-[11.5px] text-slate-600">
                                     {record.CustomerServiceEmail}
                                   </span>
                                 )}
@@ -385,7 +435,7 @@ export function CarrierList({
                                       record.CustomerServiceEmail
                                     )
                                   }
-                                  className="p-0.5 text-[#777] hover:text-[#286090] cursor-pointer"
+                                  className="p-0.5 text-slate-400 hover:text-sky-700 cursor-pointer transition-colors"
                                   title="Copy Customer Service Email"
                                 >
                                   <Copy className="w-3 h-3" />
@@ -396,8 +446,8 @@ export function CarrierList({
 
                           {/* Claims Support */}
                           {record.ClaimsPhone || record.ClaimsEmail ? (
-                            <div className="pt-1 border-t border-[#f0f0f0]">
-                              <span className="text-[10.5px] font-bold text-rose-800 uppercase tracking-wider block">
+                            <div className="pt-1.5 border-t border-slate-100">
+                              <span className="text-[10px] font-semibold text-rose-700 uppercase tracking-wider block mb-0.5">
                                 Claims Support
                               </span>
                               {record.ClaimsPhone && (
@@ -405,7 +455,7 @@ export function CarrierList({
                                   {claimsTel ? (
                                     <a
                                       href={claimsTel}
-                                      className="text-[#222222] hover:text-[#286090] hover:underline font-semibold inline-flex items-center gap-1"
+                                      className="text-slate-800 hover:text-sky-700 hover:underline font-mono font-semibold inline-flex items-center gap-1"
                                     >
                                       <AlertCircle className="w-3 h-3 text-rose-600" />
                                       <HighlightedText
@@ -414,7 +464,7 @@ export function CarrierList({
                                       />
                                     </a>
                                   ) : (
-                                    <span>{record.ClaimsPhone}</span>
+                                    <span className="font-mono">{record.ClaimsPhone}</span>
                                   )}
                                   <button
                                     type="button"
@@ -424,7 +474,7 @@ export function CarrierList({
                                         record.ClaimsPhone
                                       )
                                     }
-                                    className="p-0.5 text-[#777] hover:text-[#286090] cursor-pointer"
+                                    className="p-0.5 text-slate-400 hover:text-sky-700 cursor-pointer transition-colors"
                                     title="Copy Claims Phone"
                                   >
                                     <Copy className="w-3 h-3" />
@@ -435,7 +485,7 @@ export function CarrierList({
                                 <div className="flex items-center gap-1 mt-0.5">
                                   <a
                                     href={claimsMail}
-                                    className="text-[#286090] hover:underline text-[11px] inline-flex items-center gap-1 truncate max-w-[230px]"
+                                    className="text-sky-700 hover:underline text-[11px] inline-flex items-center gap-1 truncate max-w-[230px]"
                                   >
                                     <Mail className="w-2.5 h-2.5 shrink-0" />
                                     <span className="truncate">
@@ -453,18 +503,18 @@ export function CarrierList({
                           {/* Agent Dedicated Line */}
                           {record.ForAgents &&
                             record.ForAgents !== record.CustomerServicePhone && (
-                              <div className="pt-1 border-t border-[#f0f0f0]">
-                                <span className="text-[10.5px] font-semibold text-[#666666] block">
+                              <div className="pt-1.5 border-t border-slate-100">
+                                <span className="text-[10.5px] font-medium text-slate-500 block">
                                   Agent Line:{' '}
                                   {agentTel ? (
                                     <a
                                       href={agentTel}
-                                      className="text-[#286090] font-bold hover:underline"
+                                      className="text-sky-700 font-mono font-semibold hover:underline"
                                     >
                                       {record.ForAgents}
                                     </a>
                                   ) : (
-                                    <span className="text-[#222222] font-bold">
+                                    <span className="text-slate-800 font-mono font-semibold">
                                       {record.ForAgents}
                                     </span>
                                   )}
@@ -476,7 +526,7 @@ export function CarrierList({
 
                       {/* Column 3: Desk-Priority Payment, Agent Portal, Website & CC Fee Badge */}
                       <td
-                        className="px-3 py-3 align-top"
+                        className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3.5'} align-top`}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex flex-col gap-2">
@@ -487,7 +537,7 @@ export function CarrierList({
                                 href={paymentUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="qq-btn-green py-1 px-2.5 text-[11.5px] font-bold inline-flex items-center gap-1 shadow-2xs"
+                                className="py-1.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white border border-sky-700/80 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors"
                                 title={`Make Insured Payment for ${record.Carrier}`}
                               >
                                 <CreditCard className="w-3.5 h-3.5" />
@@ -495,7 +545,7 @@ export function CarrierList({
                                 <ExternalLink className="w-2.5 h-2.5 opacity-85" />
                               </a>
                             ) : (
-                              <span className="text-[11px] text-[#999999] py-1 px-2 border border-[#e5e5e5] rounded-[2px] bg-[#fafafa]">
+                              <span className="text-xs text-slate-400 py-1.5 px-2.5 border border-slate-200/70 rounded-lg bg-slate-50/70">
                                 No Payment Link
                               </span>
                             )}
@@ -505,10 +555,10 @@ export function CarrierList({
                                 href={agentPortalUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="qq-btn-secondary py-1 px-2.5 text-[11.5px] font-bold text-[#286090] inline-flex items-center gap-1 shadow-2xs"
+                                className="py-1.5 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors"
                                 title={`Agent Portal Login for ${record.Carrier}`}
                               >
-                                <KeyRound className="w-3 h-3 text-[#286090]" />
+                                <KeyRound className="w-3 h-3 text-sky-700" />
                                 <span>Agent Portal</span>
                                 <ExternalLink className="w-2.5 h-2.5 opacity-70" />
                               </a>
@@ -519,10 +569,10 @@ export function CarrierList({
                                 href={publicWebUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="qq-btn-secondary py-1 px-2 text-[11px] font-semibold text-[#444444] inline-flex items-center gap-1"
+                                className="py-1.5 px-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/90 text-xs font-medium inline-flex items-center gap-1 transition-colors"
                                 title={`Public Website: ${publicWebUrl}`}
                               >
-                                <Globe className="w-3 h-3 text-[#286090]" />
+                                <Globe className="w-3 h-3 text-slate-500" />
                                 <span>Website</span>
                               </a>
                             ) : null}
@@ -537,7 +587,7 @@ export function CarrierList({
                                 onClick={() =>
                                   handleQuickCopy('Payment URL', paymentUrl)
                                 }
-                                className="text-[11px] text-[#286090] hover:underline inline-flex items-center gap-1 cursor-pointer font-semibold"
+                                className="text-[11px] text-sky-700 hover:text-sky-900 hover:underline inline-flex items-center gap-1 cursor-pointer font-semibold"
                                 title="Copy Payment Link for Insured"
                               >
                                 <Copy className="w-3 h-3" />
@@ -557,19 +607,19 @@ export function CarrierList({
       )}
 
       {/* Pagination & Status Footer Bar */}
-      <div className="bg-white border border-[#d5d5d5] rounded-[3px] px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11.5px] text-[#555555] shadow-2xs">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div>
+      <div className="bg-white border border-slate-200/90 rounded-xl px-4 py-2.5 mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="tabular-nums">
             Showing{' '}
-            <strong className="text-[#222222] font-bold">{startIdx}</strong> to{' '}
-            <strong className="text-[#222222] font-bold">{endIdx}</strong> of{' '}
-            <strong className="text-[#222222] font-bold">
+            <strong className="text-slate-900 font-semibold">{startIdx}</strong>–
+            <strong className="text-slate-900 font-semibold">{endIdx}</strong> of{' '}
+            <strong className="text-slate-900 font-semibold">
               {records.length}
             </strong>{' '}
-            carriers
+            carrier shortcuts
           </div>
 
-          <div className="flex items-center gap-1 ml-2 text-[11px] text-[#666]">
+          <div className="flex items-center gap-1.5 ml-2 text-xs text-slate-500">
             <label htmlFor="carrier-page-size" className="hidden md:inline">
               Per page:
             </label>
@@ -580,7 +630,7 @@ export function CarrierList({
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="bg-white border border-[#b0b0b0] rounded-[2px] px-1 py-0.5 text-[11px] text-[#333] cursor-pointer"
+              className="bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-800 font-medium cursor-pointer focus:outline-hidden focus:border-sky-600"
             >
               <option value={25}>25</option>
               <option value={50}>50</option>
@@ -591,7 +641,7 @@ export function CarrierList({
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center gap-1 select-none">
+          <div className="flex items-center gap-1.5 select-none">
             <button
               type="button"
               onClick={() => {
@@ -599,7 +649,7 @@ export function CarrierList({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === 1}
-              className="px-2 py-0.5 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer font-bold text-[11px] text-[#333333]"
+              className="px-2.5 py-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold text-xs text-slate-700 transition-colors"
             >
               « First
             </button>
@@ -610,13 +660,13 @@ export function CarrierList({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage === 1}
-              className="p-1 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer"
+              className="p-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer transition-colors"
               title="Previous Page"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
 
-            <span className="px-2 py-0.5 text-[11.5px] font-bold text-[#222222]">
+            <span className="px-2 py-0.5 text-xs font-semibold text-slate-800 tabular-nums">
               Page {currentPage} of {totalPages}
             </span>
 
@@ -627,7 +677,7 @@ export function CarrierList({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage >= totalPages}
-              className="p-1 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer"
+              className="p-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer transition-colors"
               title="Next Page"
             >
               <ChevronRight className="w-3.5 h-3.5" />
@@ -639,7 +689,7 @@ export function CarrierList({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               disabled={currentPage >= totalPages}
-              className="px-2 py-0.5 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer font-bold text-[11px] text-[#333333]"
+              className="px-2.5 py-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold text-xs text-slate-700 transition-colors"
             >
               Last »
             </button>

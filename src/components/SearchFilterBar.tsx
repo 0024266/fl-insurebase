@@ -40,8 +40,6 @@ const PRESET_SEARCHES = [
 export function SearchFilterBar({
   searchQuery,
   onSearchChange,
-  categoryFilter = 'all',
-  onCategoryChange,
   sortOption,
   onSortChange,
   onDetectZip
@@ -78,65 +76,21 @@ export function SearchFilterBar({
   };
 
   return (
-    <div className="bg-white border border-[#d5d5d5] rounded-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-3 sm:p-4 mb-3 text-[#222222]">
-      {/* Category Segment Filter Pills */}
-      {onCategoryChange && (
-        <div className="flex flex-wrap items-center gap-1.5 mb-3 pb-2.5 border-b border-[#ebebeb]">
-          <span className="text-[#555555] font-bold text-[11.5px] mr-1 select-none">
-            {isSpanish ? 'Filtrar Tipo:' : 'Clause Type:'}
-          </span>
-          <button
-            type="button"
-            onClick={() => onCategoryChange('all')}
-            className={`px-2.5 py-1 rounded-[3px] text-[12px] font-semibold transition-all cursor-pointer border ${
-              categoryFilter === 'all'
-                ? 'bg-[#1b365d] text-white border-[#1b365d] shadow-2xs'
-                : 'bg-[#f4f6f8] text-[#444444] border-[#d0d7de] hover:bg-[#e8ecf0]'
-            }`}
-          >
-            {isSpanish ? 'Todos los Registros' : 'All Records'}
-          </button>
-          <button
-            type="button"
-            onClick={() => onCategoryChange('mortgagees')}
-            className={`px-2.5 py-1 rounded-[3px] text-[12px] font-semibold transition-all cursor-pointer border flex items-center gap-1 ${
-              categoryFilter === 'mortgagees' || categoryFilter === 'mortgagee'
-                ? 'bg-[#0052cc] text-white border-[#0052cc] shadow-2xs'
-                : 'bg-[#edf4ff] text-[#0052cc] border-[#b0d0ff] hover:bg-[#dbe9ff]'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
-            {isSpanish ? 'Acreedores Hipotecarios (ISAOA / ATIMA)' : 'Mortgagees / ISAOA / ATIMA'}
-          </button>
-          <button
-            type="button"
-            onClick={() => onCategoryChange('auto_loss_payee')}
-            className={`px-2.5 py-1 rounded-[3px] text-[12px] font-semibold transition-all cursor-pointer border flex items-center gap-1 ${
-              categoryFilter === 'auto_loss_payee'
-                ? 'bg-[#b45309] text-white border-[#b45309] shadow-2xs'
-                : 'bg-[#fff8e6] text-[#b45309] border-[#fde68a] hover:bg-[#fef3c7]'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
-            {isSpanish ? 'Auto y Beneficiario de Pérdidas' : 'Auto & Loss Payee'}
-          </button>
-        </div>
-      )}
-
-      <form onSubmit={handleGoClick} className="flex flex-col gap-2.5">
-        {/* Main Controls Row: Enter Search Criteria Box + Clean Separate Sort Selector */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 justify-between">
-          {/* Search Box: Styled like Enter Search Criteria */}
-          <div className="flex-1 max-w-2xl">
+    <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs p-3.5 sm:p-4 mb-4 text-slate-900">
+      <form onSubmit={handleGoClick} className="flex flex-col gap-3">
+        {/* Main Controls Row: Search Input + GO Button + Sort Selector */}
+        <div className="flex flex-wrap items-end gap-3 justify-between w-full">
+          {/* Primary Search Box */}
+          <div className="flex-1 min-w-[240px]">
             <label
               htmlFor="global-search-input"
-              className="block text-[#333333] text-[12px] font-bold mb-1 select-none"
+              className="block text-slate-700 text-xs font-semibold mb-1.5 select-none"
             >
               {isSpanish ? 'Ingrese Criterios de Búsqueda' : 'Enter Search Criteria'}
             </label>
-            <div className="flex items-stretch shadow-2xs">
-              <div className="relative flex-1 flex items-center">
-                <Search className="w-4 h-4 text-[#777777] absolute left-2.5 pointer-events-none z-10" />
+            <div className="flex items-stretch">
+              <div className="relative flex-1 flex items-center min-w-0">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none z-10" />
                 <input
                   id="global-search-input"
                   type="text"
@@ -152,21 +106,22 @@ export function SearchFilterBar({
                     onSearchChange(val);
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder={isSpanish ? 'Buscar Nombre, Póliza #, Teléfono ...' : 'Search Name, Policy #, Phone ...'}
-                  className="w-full bg-white text-[#222222] text-[13px] border border-[#b0b0b0] border-r-0 pl-9 pr-14 py-1 rounded-l-[2px] focus:outline-hidden focus:border-[#286090] focus:ring-1 focus:ring-[#286090]/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] h-[32px] font-sans placeholder-[#888888]"
+                  placeholder={isSpanish ? 'Buscar Nombre, Póliza #, Teléfono ...' : 'Search Lender Name, Clause, Address, Phone ...'}
+                  className="w-full bg-white text-slate-900 text-[13px] border border-slate-300 border-r-0 pl-9 pr-16 py-1.5 rounded-l-lg focus:outline-hidden focus:border-sky-600 focus:ring-2 focus:ring-sky-500/20 h-9 font-sans placeholder-slate-400 transition-all"
                 />
-                <div className="absolute right-2 flex items-center gap-1 z-10">
+                <div className="absolute right-2.5 flex items-center gap-1 z-10">
                   {localInput ? (
                     <button
                       type="button"
                       onClick={handleClear}
-                      className="text-[#888888] hover:text-[#222222] cursor-pointer p-1"
+                      className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md cursor-pointer p-1 transition-colors"
                       title={isSpanish ? 'Limpiar búsqueda (Esc)' : 'Clear search (Esc)'}
+                      aria-label={isSpanish ? 'Limpiar búsqueda' : 'Clear search'}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   ) : showTooltips ? (
-                    <span className="text-[9.5px] font-mono text-[#888888] bg-[#f0f0f0] border border-[#d0d0d0] px-1 py-0.5 rounded pointer-events-none hidden sm:inline">
+                    <span className="text-[10px] font-mono text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md pointer-events-none hidden sm:inline">
                       Ctrl K
                     </span>
                   ) : null}
@@ -174,28 +129,28 @@ export function SearchFilterBar({
               </div>
               <button
                 type="submit"
-                className="qq-btn-go px-3.5 py-1 uppercase rounded-r-[2px] rounded-l-none -ml-[1px] cursor-pointer flex items-center justify-center shrink-0 h-[32px] font-bold text-[11px] tracking-wide"
+                className="px-4 py-1.5 uppercase rounded-r-lg bg-slate-900 hover:bg-slate-800 text-white border border-slate-900 cursor-pointer flex items-center justify-center shrink-0 h-9 font-semibold text-xs tracking-wide transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sky-500/40"
               >
                 GO
               </button>
             </div>
           </div>
 
-          {/* Sort Selector: Label OUTSIDE the box */}
-          <div className="flex flex-col shrink-0">
+          {/* Sort Selector */}
+          <div className="flex flex-col w-full sm:w-auto shrink-0">
             <label
               htmlFor="mortgage-sort-select"
-              className="block text-[#333333] text-[12px] font-bold mb-1 select-none"
+              className="block text-slate-700 text-xs font-semibold mb-1.5 select-none"
             >
-              {t('sortBy')}:
+              {t('sortBy')}
             </label>
-            <div className="flex items-center gap-1.5 bg-white border border-[#b0b0b0] rounded-[2px] px-2 py-1 h-[32px] shadow-2xs">
-              <ArrowUpDown className="w-3.5 h-3.5 text-[#286090]" />
+            <div className="flex items-center gap-2 bg-white border border-slate-300 hover:border-slate-400 focus-within:border-sky-600 focus-within:ring-2 focus-within:ring-sky-500/20 rounded-lg px-3 py-1.5 h-9 shadow-2xs transition-all">
+              <ArrowUpDown className="w-3.5 h-3.5 text-sky-700 shrink-0" />
               <select
                 id="mortgage-sort-select"
                 value={sortOption}
                 onChange={(e) => onSortChange(e.target.value as SortOption)}
-                className="bg-transparent border-none text-[12.5px] text-[#222222] font-semibold focus:outline-hidden cursor-pointer"
+                className="bg-transparent border-none text-xs text-slate-800 font-semibold focus:outline-hidden cursor-pointer w-full"
               >
                 <option value="name_asc">{t('sortNameAsc')}</option>
                 <option value="name_desc">{t('sortNameDesc')}</option>
@@ -206,10 +161,14 @@ export function SearchFilterBar({
           </div>
         </div>
 
-        {/* Popular Preset Searches Chips */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#ebebeb]">
-          <div className="flex flex-wrap items-center gap-1.5 text-[11.5px]">
-            <span className="text-[#555555] font-bold text-[11px] select-none">
+        {/* Popular Preset Searches Chips — Single Horizontal Row with Hidden Overflow */}
+        <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-slate-100 overflow-hidden">
+          <div
+            className="flex flex-nowrap items-center gap-1.5 text-xs overflow-hidden min-w-0 flex-1"
+            role="group"
+            aria-label={isSpanish ? 'Prestamistas frecuentes' : 'Popular Lenders quick filters'}
+          >
+            <span className="text-slate-500 font-semibold text-[11.5px] mr-0.5 select-none shrink-0 whitespace-nowrap">
               {isSpanish ? 'Prestamistas Frecuentes:' : 'Popular Lenders:'}
             </span>
             {PRESET_SEARCHES.map((preset) => {
@@ -218,6 +177,7 @@ export function SearchFilterBar({
                 <button
                   key={preset}
                   type="button"
+                  aria-pressed={isMatch}
                   onClick={() => {
                     if (isMatch) {
                       onSearchChange('');
@@ -225,10 +185,10 @@ export function SearchFilterBar({
                       onSearchChange(preset);
                     }
                   }}
-                  className={`px-2 py-0.5 rounded-[2px] transition-colors cursor-pointer text-[11.5px] font-medium ${
+                  className={`px-2.5 py-1 rounded-full transition-all cursor-pointer text-xs font-medium border shrink-0 whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sky-500/40 ${
                     isMatch
-                      ? 'bg-[#286090] text-white font-bold'
-                      : 'bg-[#f4f6f8] text-[#333333] hover:bg-[#e8ecf0] border border-[#d0d7de]'
+                      ? 'bg-sky-600 text-white border-sky-600 font-semibold shadow-2xs'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 border-slate-200/90'
                   }`}
                 >
                   {preset}
@@ -241,7 +201,7 @@ export function SearchFilterBar({
             <button
               type="button"
               onClick={handleClear}
-              className="text-rose-700 hover:text-rose-900 text-[11.5px] font-bold cursor-pointer inline-flex items-center gap-1 hover:underline ml-auto"
+              className="text-rose-600 hover:text-rose-800 text-xs font-semibold cursor-pointer inline-flex items-center gap-1 hover:underline shrink-0 whitespace-nowrap ml-2"
               title="Clear search"
             >
               <RotateCcw className="w-3 h-3" />
@@ -252,19 +212,20 @@ export function SearchFilterBar({
 
         {/* Guidance Banner */}
         {showHelpBanners && (
-          <div className="flex items-center justify-between text-[11.5px] text-[#444444] bg-[#f2f7fc] border border-[#d0e0f0] px-2.5 py-1.5 rounded-[2px] transition-all">
-            <div className="flex items-center gap-1.5 truncate">
-              <Info className="w-3.5 h-3.5 text-[#286090] shrink-0" />
+          <div className="flex items-center justify-between text-xs text-slate-600 bg-sky-50/70 border border-sky-200/70 px-3 py-2 rounded-lg transition-all">
+            <div className="flex items-center gap-2 truncate">
+              <Info className="w-3.5 h-3.5 text-sky-700 shrink-0" />
               <span className="truncate">{t('searchHintMortgage')}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-2">
               <button
                 type="button"
                 onClick={toggleHelpBanners}
-                className="text-[#888888] hover:text-[#444444] p-0.5 cursor-pointer text-[10px]"
+                className="text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer transition-colors"
                 title="Hide guidance"
+                aria-label="Hide guidance"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ExternalLink,
   Edit2,
@@ -65,7 +65,7 @@ export function PermitList({
   onCountyChange
 }: PermitListProps) {
   const { isSpanish } = useLanguage();
-  const { viewMode, setViewMode } = usePreferences();
+  const { viewMode, setViewMode, compactView } = usePreferences();
 
   const handleShareRecord = (e: React.MouseEvent, record: FloridaZipRecord) => {
     e.stopPropagation();
@@ -88,12 +88,12 @@ export function PermitList({
 
   if (allFilteredCount === 0) {
     return (
-      <div className="bg-white border border-[#d5d5d5] rounded-[3px] p-8 text-center text-[#555555] shadow-xs">
-        <MapPin className="w-9 h-9 text-[#999999] mx-auto mb-2" />
-        <p className="text-[13.5px] font-bold text-[#222222]">
+      <div className="bg-white border border-slate-200/90 rounded-xl p-10 text-center text-slate-600 shadow-2xs">
+        <MapPin className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+        <p className="text-sm font-bold text-slate-900">
           {isSpanish ? 'No se encontraron registros de Florida' : 'No Florida ZIP / Permit Records Found'}
         </p>
-        <p className="text-[12px] text-[#666666] mt-1">
+        <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
           {isSpanish ? 'Intente ajustar sus criterios de búsqueda.' : 'Try adjusting your search criteria.'}
         </p>
       </div>
@@ -103,54 +103,60 @@ export function PermitList({
   return (
     <div className="flex flex-col font-sans">
       {/* Table & Grid Header Bar */}
-      <div className="text-[13px] font-normal text-[#555555] mb-2 flex items-center justify-between px-0.5 select-none">
-        <h2 className="flex items-center gap-1.5 text-[13.5px] font-normal text-[#555555] m-0">
-          <Search className="w-4 h-4 text-[#777777]" />
-          <span>
+      <div className="text-xs font-medium text-slate-600 mb-3 flex flex-wrap items-center justify-between gap-2.5 px-0.5 select-none">
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 m-0">
+          <Search className="w-4 h-4 text-sky-700 shrink-0" />
+          <span className="tabular-nums">
             {isSpanish
               ? `Jurisdicciones de Florida (${allFilteredCount.toLocaleString()} encontradas)`
               : `Showing Florida Jurisdictions (${allFilteredCount.toLocaleString()} total found)`}
           </span>
         </h2>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-white border border-[#b0b0b0] rounded-[2px] p-0.5 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center bg-slate-100 border border-slate-200/80 rounded-lg p-0.5">
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`p-1 rounded-[2px] transition-colors cursor-pointer ${
+              aria-pressed={viewMode === 'table'}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 viewMode === 'table'
-                  ? 'bg-[#286090] text-white'
-                  : 'text-[#666666] hover:text-[#222222]'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Table View"
+              aria-label="Table View"
             >
               <TableIcon className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               onClick={() => setViewMode('cards')}
-              className={`p-1 rounded-[2px] transition-colors cursor-pointer ${
+              aria-pressed={viewMode === 'cards'}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 viewMode === 'cards'
-                  ? 'bg-[#286090] text-white'
-                  : 'text-[#666666] hover:text-[#222222]'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Cards View"
+              aria-label="Cards View"
             >
               <LayoutGrid className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               onClick={() => setViewMode('map')}
-              className={`px-1.5 py-1 rounded-[2px] transition-colors cursor-pointer flex items-center gap-1 ${
+              aria-pressed={viewMode === 'map'}
+              className={`px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
                 viewMode === 'map'
-                  ? 'bg-[#286090] text-white'
-                  : 'text-[#666666] hover:text-[#222222]'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Interactive Florida Map View"
+              aria-label="Interactive Florida Map View"
             >
               <MapIcon className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-bold">Map</span>
+              <span className="text-[11px] font-semibold">Map</span>
             </button>
           </div>
         </div>
@@ -170,7 +176,7 @@ export function PermitList({
 
       {/* --- VIEW 1: CARDS VIEW --- */}
       {viewMode === 'cards' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {records.map((record) => {
             const id = getPermitRecordId(record);
             const isSelected = id === selectedId;
@@ -182,23 +188,23 @@ export function PermitList({
               <div
                 key={id}
                 onClick={() => onSelect(id)}
-                className={`bg-white border rounded-[3px] p-3.5 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                className={`bg-white border rounded-xl p-4 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-3.5 ${
                   isSelected
-                    ? 'border-[#286090] ring-1 ring-[#286090] bg-[#eaf2fa]'
-                    : 'border-[#d5d5d5] hover:border-[#999999]'
+                    ? 'border-sky-600 ring-2 ring-sky-500/20 bg-sky-50/30'
+                    : 'border-slate-200/90 hover:border-slate-300'
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="font-normal text-[14px] text-[#286090] hover:underline uppercase leading-tight">
+                      <h3 className="font-bold text-[14px] text-slate-900 hover:text-sky-700 transition-colors uppercase leading-snug">
                         {record.City || '—'}, FL
                       </h3>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="font-mono font-bold text-[12px] text-[#222222] bg-[#f0f0f0] px-1.5 py-0.5 rounded-[2px]">
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-mono font-semibold text-xs text-slate-800 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-md tabular-nums">
                           ZIP {zipStr}
                         </span>
-                        <span className="text-[11.5px] text-[#666666] uppercase">
+                        <span className="text-xs text-slate-500 font-medium uppercase">
                           {record.County} County
                         </span>
                       </div>
@@ -206,32 +212,32 @@ export function PermitList({
                   </div>
 
                   {/* Ratings */}
-                  <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                    <span className="text-[10px] px-1.5 py-0.5 bg-[#f0f6fc] text-[#286090] font-bold border border-[#c0d0e0] rounded-[2px]">
+                  <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                    <span className="text-[10.5px] px-2 py-0.5 bg-sky-50 text-sky-800 font-semibold border border-sky-200/90 rounded-md">
                       PPC {ratings.ppc || '10'}
                     </span>
                     {ratings.windZone !== null && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-[#f0f9ff] text-[#0284c7] font-bold rounded-[2px] border border-[#bae6fd]">
+                      <span className="text-[10.5px] px-2 py-0.5 bg-indigo-50 text-indigo-800 font-semibold rounded-md border border-indigo-200/90">
                         Zone {ratings.windZone}
                       </span>
                     )}
                     {terrain && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-[#fdf8e6] text-[#8a6d3b] font-bold rounded-[2px] border border-[#f0e4c3]">
+                      <span className="text-[10.5px] px-2 py-0.5 bg-amber-50 text-amber-800 font-semibold rounded-md border border-amber-200/90">
                         Terrain {terrain}
                       </span>
                     )}
                   </div>
 
                   {/* Links */}
-                  <div className="mt-3 pt-2.5 border-t border-[#f0f0f0] space-y-1.5 text-[12px]" onClick={(e) => e.stopPropagation()}>
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-2 text-xs" onClick={(e) => e.stopPropagation()}>
                     {record.PAlink && record.PAlink.trim() && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#666666]">Appraiser:</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-500 font-medium">Appraiser:</span>
                         <a
                           href={record.PAlink.trim()}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="qq-btn-secondary text-[11px] py-0.5 px-2 text-[#286090] font-semibold inline-flex items-center gap-1"
+                          className="py-1 px-2.5 rounded-lg bg-sky-50 hover:bg-sky-100/80 text-sky-800 border border-sky-200/90 text-xs font-semibold inline-flex items-center gap-1 transition-colors"
                         >
                           <span>Appraiser Portal</span>
                           <ExternalLink className="w-2.5 h-2.5 opacity-70" />
@@ -239,13 +245,13 @@ export function PermitList({
                       </div>
                     )}
                     {record.PermitByCounty && record.PermitByCounty.trim() && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#666666]">County Permit:</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-500 font-medium">County Permit:</span>
                         <a
                           href={record.PermitByCounty.trim()}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="qq-btn-secondary text-[11px] py-0.5 px-2 text-[#286090] font-semibold inline-flex items-center gap-1"
+                          className="py-1 px-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs font-semibold inline-flex items-center gap-1 shadow-2xs transition-colors"
                         >
                           <span>County Portal</span>
                           <ExternalLink className="w-2.5 h-2.5 opacity-70" />
@@ -253,13 +259,13 @@ export function PermitList({
                       </div>
                     )}
                     {record.PermitByCity && record.PermitByCity.trim() && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#666666]">City Permit:</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-500 font-medium">City Permit:</span>
                         <a
                           href={record.PermitByCity.trim()}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="qq-btn-secondary text-[11px] py-0.5 px-2 text-[#286090] font-semibold inline-flex items-center gap-1"
+                          className="py-1 px-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs font-semibold inline-flex items-center gap-1 shadow-2xs transition-colors"
                         >
                           <span>City Portal</span>
                           <ExternalLink className="w-2.5 h-2.5 opacity-70" />
@@ -270,13 +276,13 @@ export function PermitList({
                 </div>
 
                 {/* Bottom Buttons */}
-                <div className="mt-1 pt-2 border-t border-[#e5e5e5] flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     onClick={() => onSelect(id)}
-                    className="qq-btn-secondary text-[11.5px] py-1 px-2.5 flex items-center gap-1 font-bold cursor-pointer"
+                    className="py-1 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs flex items-center gap-1 font-semibold cursor-pointer transition-colors"
                   >
-                    <Eye className="w-3.5 h-3.5 text-[#286090]" />
+                    <Eye className="w-3.5 h-3.5 text-slate-600" />
                     <span>View Details</span>
                   </button>
 
@@ -284,7 +290,7 @@ export function PermitList({
                     <button
                       type="button"
                       onClick={(e) => handleShareRecord(e, record)}
-                      className="p-1 rounded text-[#666666] hover:text-[#286090] hover:bg-[#f0f0f0] cursor-pointer"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer transition-colors"
                       title="Copy share link"
                     >
                       <Share2 className="w-3.5 h-3.5" />
@@ -294,7 +300,7 @@ export function PermitList({
                         <button
                           type="button"
                           onClick={() => onEdit(record)}
-                          className="p-1 rounded text-amber-700 hover:bg-amber-50 cursor-pointer"
+                          className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 cursor-pointer transition-colors"
                           title="Edit Record"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -303,7 +309,7 @@ export function PermitList({
                           <button
                             type="button"
                             onClick={() => onDuplicate(record)}
-                            className="p-1 rounded text-sky-700 hover:bg-sky-50 cursor-pointer"
+                            className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 cursor-pointer transition-colors"
                             title="Duplicate & Edit Record"
                           >
                             <Copy className="w-3.5 h-3.5" />
@@ -312,7 +318,7 @@ export function PermitList({
                         <button
                           type="button"
                           onClick={() => onDelete(id)}
-                          className="p-1 rounded text-rose-700 hover:bg-rose-50 cursor-pointer"
+                          className="p-1.5 rounded-lg text-rose-700 hover:bg-rose-50 cursor-pointer transition-colors"
                           title="Delete Record"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -327,27 +333,27 @@ export function PermitList({
         </div>
       ) : (
         /* --- VIEW 2: TABLE DATA GRID --- */
-        <div className="bg-white border border-[#d5d5d5] rounded-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+        <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[750px] font-sans">
+            <table className="w-full text-left border-collapse min-w-[760px] font-sans">
               <caption className="sr-only">
                 Florida Property Appraiser and Municipal Building Permit Directory
               </caption>
               <thead>
-                <tr className="qq-table-head select-none border-b border-[#d5d5d5]">
-                  <th scope="col" className="px-4 py-2.5 w-[42%] text-[#222222] font-bold text-[12.5px]">
+                <tr className="bg-slate-50/90 select-none border-b border-slate-200/90 text-slate-600 text-xs uppercase tracking-wider font-semibold">
+                  <th scope="col" className={`${compactView ? 'px-3.5 py-2.5' : 'px-4 py-3'} w-[42%]`}>
                     {isSpanish ? 'Jurisdicción y Terreno' : 'Jurisdiction & Location'}
                   </th>
-                  <th scope="col" className="px-3 py-2.5 w-[42%] text-[#222222] font-bold text-[12.5px]">
+                  <th scope="col" className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3'} w-[42%]`}>
                     {isSpanish ? 'Tasador y Portales de Permisos' : 'Appraiser & Permit Portals'}
                   </th>
-                  <th scope="col" className="px-3 py-2.5 w-[16%] text-[#222222] font-bold text-[12.5px]">
+                  <th scope="col" className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3'} w-[16%]`}>
                     {isSpanish ? 'Acciones' : 'Actions'}
                   </th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-[#e8e8e8] text-[12.5px]">
+              <tbody className={`divide-y divide-slate-200/75 ${compactView ? 'text-xs' : 'text-[13px]'}`}>
                 {records.map((record) => {
                   const id = getPermitRecordId(record);
                   const isSelected = id === selectedId;
@@ -361,36 +367,36 @@ export function PermitList({
                       onClick={() => onSelect(id)}
                       className={`cursor-pointer transition-colors group ${
                         isSelected
-                          ? 'qq-row-selected'
-                          : 'qq-row-zebra bg-white'
+                          ? 'bg-sky-50/80 shadow-[inset_3px_0_0_0_#0284c7]'
+                          : 'bg-white hover:bg-slate-50/90'
                       }`}
                     >
                       {/* Column 1: Jurisdiction & Location */}
-                      <td className="px-4 py-3 align-top">
+                      <td className={`${compactView ? 'px-3.5 py-2.5' : 'px-4 py-3.5'} align-top`}>
                         <div className="min-w-0 pr-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[#286090] group-hover:underline font-normal text-[13.5px] uppercase">
+                            <span className="text-slate-900 group-hover:text-sky-700 font-bold text-[13.5px] uppercase transition-colors">
                               {record.City || '—'}, FL
                             </span>
-                            <span className="font-mono text-[12px] text-[#222222] bg-[#f0f0f0] px-1.5 py-0.2 rounded-[2px]">
+                            <span className="font-mono font-semibold text-xs text-slate-800 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-md tabular-nums">
                               {zipStr}
                             </span>
-                            <span className="text-[11.5px] text-[#666666] uppercase">
+                            <span className="text-xs text-slate-500 font-medium uppercase">
                               {record.County} County
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap text-[10.5px]">
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[10.5px]">
                             {terrain && (
-                              <span className="px-1.5 py-0.2 rounded-[2px] border bg-[#fdf8e6] text-[#8a6d3b] border-[#f0e4c3] font-semibold">
+                              <span className="px-2 py-0.5 rounded-md border bg-amber-50 text-amber-800 border-amber-200/90 font-semibold">
                                 Terrain {terrain}
                               </span>
                             )}
-                            <span className="px-1.5 py-0.2 bg-[#f0f6fc] text-[#286090] font-bold border border-[#c0d0e0] rounded-[2px]">
+                            <span className="px-2 py-0.5 bg-sky-50 text-sky-800 font-semibold border border-sky-200/90 rounded-md">
                               PPC {ratings.ppc || '10'}
                             </span>
                             {ratings.windZone !== null && (
-                              <span className="px-1.5 py-0.2 bg-[#f0f9ff] text-[#0284c7] font-bold rounded-[2px] border border-[#bae6fd]">
+                              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-800 font-semibold rounded-md border border-indigo-200/90">
                                 Zone {ratings.windZone}
                               </span>
                             )}
@@ -399,15 +405,15 @@ export function PermitList({
                       </td>
 
                       {/* Column 2: Direct Portals as Clean Buttons */}
-                      <td className="px-3 py-3 align-top">
-                        <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                      <td className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3.5'} align-top`}>
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
                           {record.PAlink && record.PAlink.trim() ? (
                             <a
                               href={record.PAlink.trim()}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="qq-btn-secondary px-2 py-1 text-[#286090] font-bold inline-flex items-center gap-1 shadow-2xs"
+                              className="py-1.5 px-3 rounded-lg bg-sky-50 hover:bg-sky-100/80 text-sky-800 border border-sky-200/90 font-semibold inline-flex items-center gap-1.5 transition-colors"
                             >
                               <span>Appraiser</span>
                               <ExternalLink className="w-2.5 h-2.5 opacity-70" />
@@ -420,7 +426,7 @@ export function PermitList({
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="qq-btn-secondary px-2 py-1 text-[#286090] font-bold inline-flex items-center gap-1 shadow-2xs"
+                              className="py-1.5 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors"
                             >
                               <span>County Permit</span>
                               <ExternalLink className="w-2.5 h-2.5 opacity-70" />
@@ -433,7 +439,7 @@ export function PermitList({
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="qq-btn-secondary px-2 py-1 text-[#286090] font-bold inline-flex items-center gap-1 shadow-2xs"
+                              className="py-1.5 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors"
                             >
                               <span>City Permit</span>
                               <ExternalLink className="w-2.5 h-2.5 opacity-70" />
@@ -443,14 +449,15 @@ export function PermitList({
                       </td>
 
                       {/* Column 3: Quick Actions */}
-                      <td className="px-3 py-3 align-top">
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                      <td className={`${compactView ? 'px-3 py-2.5' : 'px-3.5 py-3.5'} align-top`}>
+                        <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={() => onSelect(id)}
-                            className="text-[#286090] hover:underline font-bold text-[12px] cursor-pointer"
+                            className="text-sky-700 hover:text-sky-900 hover:underline font-semibold text-xs cursor-pointer inline-flex items-center gap-1"
                           >
-                            View Details
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>View Details</span>
                           </button>
                           <button
                             type="button"
@@ -458,7 +465,7 @@ export function PermitList({
                               e.stopPropagation();
                               handleShareRecord(e, record);
                             }}
-                            className="p-1 rounded text-[#666666] hover:text-[#286090] hover:bg-[#f0f0f0] cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer transition-colors"
                             title="Share"
                           >
                             <Share2 className="w-3.5 h-3.5" />
@@ -472,7 +479,7 @@ export function PermitList({
                                     e.stopPropagation();
                                     onEdit(record);
                                   }}
-                                  className="p-1 rounded text-[#286090] hover:bg-[#e8f1f8] cursor-pointer inline-flex items-center gap-0.5 text-[11px] font-semibold border border-[#bce8f1]"
+                                  className="text-amber-700 hover:underline text-xs font-semibold cursor-pointer inline-flex items-center gap-1"
                                   title="Edit Jurisdiction"
                                 >
                                   <Edit2 className="w-3 h-3" />
@@ -486,11 +493,11 @@ export function PermitList({
                                     e.stopPropagation();
                                     onDuplicate(record);
                                   }}
-                                  className="p-1 rounded text-[#1e7e34] hover:bg-[#e9f7ec] cursor-pointer inline-flex items-center gap-0.5 text-[11px] font-semibold border border-[#c3e6cb]"
+                                  className="text-emerald-700 hover:underline text-xs font-semibold cursor-pointer inline-flex items-center gap-1"
                                   title="Duplicate & Edit Jurisdiction"
                                 >
                                   <Copy className="w-3 h-3" />
-                                  <span>Duplicate & Edit</span>
+                                  <span>Duplicate</span>
                                 </button>
                               )}
                               {onDelete && (
@@ -502,7 +509,7 @@ export function PermitList({
                                       onDelete(id);
                                     }
                                   }}
-                                  className="p-1 rounded text-[#a94442] hover:bg-[#f2dede] cursor-pointer inline-flex items-center gap-0.5 text-[11px] font-semibold border border-[#ebccd1]"
+                                  className="text-rose-600 hover:underline text-xs font-semibold cursor-pointer inline-flex items-center gap-1"
                                   title="Delete Record"
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -522,19 +529,19 @@ export function PermitList({
       )}
 
       {/* Pagination Bar */}
-      <div className="bg-[#f8f9fa] border border-[#d5d5d5] rounded-[3px] px-3.5 py-2 mt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-[#555555] shadow-xs">
-        <div>
-          Showing <strong className="text-[#222222] font-bold">{startIdx.toLocaleString()}</strong>–
-          <strong className="text-[#222222] font-bold">{endIdx.toLocaleString()}</strong> of{' '}
-          <strong className="text-[#222222] font-bold">{allFilteredCount.toLocaleString()}</strong> jurisdictions
+      <div className="bg-white border border-slate-200/90 rounded-xl px-4 py-2.5 mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs">
+        <div className="tabular-nums">
+          Showing <strong className="text-slate-900 font-semibold">{startIdx.toLocaleString()}</strong>–
+          <strong className="text-slate-900 font-semibold">{endIdx.toLocaleString()}</strong> of{' '}
+          <strong className="text-slate-900 font-semibold">{allFilteredCount.toLocaleString()}</strong> jurisdictions
         </div>
 
-        <div className="flex items-center gap-1 select-none">
+        <div className="flex items-center gap-1.5 select-none">
           <button
             type="button"
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
-            className="px-2 py-0.5 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer font-bold text-[11px] text-[#333333]"
+            className="px-2.5 py-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold text-xs text-slate-700 transition-colors"
           >
             « First
           </button>
@@ -542,12 +549,12 @@ export function PermitList({
             type="button"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="p-1 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer"
+            className="p-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer transition-colors"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
 
-          <span className="px-2 py-0.5 text-[11.5px] font-bold text-[#222222]">
+          <span className="px-2 py-0.5 text-xs font-semibold text-slate-800 tabular-nums">
             Page {currentPage} of {totalPages}
           </span>
 
@@ -555,7 +562,7 @@ export function PermitList({
             type="button"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage >= totalPages}
-            className="p-1 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer"
+            className="p-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer transition-colors"
           >
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
@@ -563,21 +570,21 @@ export function PermitList({
             type="button"
             onClick={() => onPageChange(totalPages)}
             disabled={currentPage >= totalPages}
-            className="px-2 py-0.5 bg-white border border-[#b0b0b0] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f0f0f0] cursor-pointer font-bold text-[11px] text-[#333333]"
+            className="px-2.5 py-1 bg-white border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold text-xs text-slate-700 transition-colors"
           >
             Last »
           </button>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <label htmlFor="permit-page-size" className="text-[11px] text-[#666666]">
+          <label htmlFor="permit-page-size" className="text-xs text-slate-500">
             Rows:
           </label>
           <select
             id="permit-page-size"
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="bg-white border border-[#b0b0b0] rounded-[2px] px-1.5 py-0.5 text-[11.5px] font-bold text-[#222222] cursor-pointer"
+            className="bg-white border border-slate-200 rounded-md px-2 py-1 text-xs font-medium text-slate-800 cursor-pointer focus:outline-hidden focus:border-sky-600"
           >
             <option value={25}>25</option>
             <option value={50}>50</option>

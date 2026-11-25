@@ -1,16 +1,29 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
-import {viteSingleFile} from 'vite-plugin-singlefile';
+import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
   return {
     base: './',
-    plugins: [react(), tailwindcss(), viteSingleFile()],
+    plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname || process.cwd(), '.'),
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              return 'vendor';
+            }
+            if (id.includes('src/data/initial')) {
+              return 'seed-data';
+            }
+          },
+        },
       },
     },
     server: {

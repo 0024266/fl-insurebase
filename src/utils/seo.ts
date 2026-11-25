@@ -183,8 +183,8 @@ export function updateDynamicSeo(
       ]
     };
   } else if (activeTab === 'carriers') {
-    title = 'FL InsureBase | Florida Carrier Portals, Claims & CC Fees';
-    description = 'Florida insurance carrier portals, claims contact info, and guest credit card payment fee rules.';
+    title = 'FL InsureBase | Carrier Shortcuts — Portals, Claims & CC Fees';
+    description = 'Florida insurance carrier shortcuts, payment portals, claims contact info, and guest credit card payment fee rules.';
   } else {
     title = 'FL InsureBase | Legal Disclaimer & Directory Terms';
     description = 'Legal disclaimer and directory terms for FL InsureBase.';

@@ -92,7 +92,7 @@ export function QuickViewModal({
         }
       }}
     >
-      <div className="relative bg-white border border-[#a8b3c0] rounded-[8px] w-full max-w-4xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 text-[#222]">
+      <div className="relative bg-white border border-[#a8b3c0] rounded-[8px] w-full max-w-[calc(100vw-1.25rem)] sm:max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 text-[#222]">
         {/* Modal Header Bar with Glossy Green Gradient and Navigation Controls */}
         <div className="qq-modal-header px-4 py-2.5 text-white flex items-center justify-between gap-3 shadow-xs shrink-0 select-none">
           {/* Left: Icon, Title & Badge */}

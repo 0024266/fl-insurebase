@@ -124,20 +124,15 @@ export function Logo({ onTabChange, showSubtitle = true }: LogoProps) {
       className="flex items-center gap-2.5 cursor-pointer select-none shrink-0 group"
       title="FL InsureBase — Florida Agent Operations Hub"
     >
-      <LogoIcon size={34} />
+      <LogoIcon size={32} />
 
       <div className="flex flex-col min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="font-extrabold text-[18px] text-[#1e293b] tracking-tight leading-none font-sans group-hover:text-[#0066c0] transition-colors whitespace-nowrap drop-shadow-2xs">
-            FL InsureBase
-          </span>
-          <span className="hidden xl:inline-block bg-[#0066c0]/10 text-[#0066c0] border border-[#0066c0]/20 text-[10px] font-bold px-1.5 py-0.2 rounded-[3px] uppercase tracking-wider shrink-0">
-            v2.5
-          </span>
-        </div>
+        <span className="font-extrabold text-[17px] text-slate-900 tracking-tight leading-none group-hover:text-sky-700 transition-colors whitespace-nowrap">
+          FL InsureBase
+        </span>
         {showSubtitle && (
-          <span className="text-[11px] text-slate-500 font-medium tracking-tight leading-tight hidden sm:block mt-0.5 whitespace-nowrap">
-            Florida Agent Operations Hub • Mortgagees • Folios • Carriers
+          <span className="text-[11px] text-slate-500 font-medium tracking-tight leading-tight hidden xl:block mt-0.5 whitespace-nowrap">
+            Florida Insurance Operations Directory
           </span>
         )}
       </div>

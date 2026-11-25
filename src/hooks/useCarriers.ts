@@ -24,35 +24,7 @@ const DELETED_IDS_KEY = 'agency_carriers_deleted_ids';
 export function useCarriers(
   onToast?: (title: string, desc?: string, type?: 'success' | 'info' | 'error') => void
 ) {
-  const [records, setRecords] = useState<CarrierRecord[]>(() => {
-    try {
-      const deletedRaw = localStorage.getItem(DELETED_IDS_KEY);
-      const deletedIds = new Set<string>(deletedRaw ? JSON.parse(deletedRaw) : []);
-
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Merge stored records with base CSV dataset by ID
-          const mergedMap = new Map<string, CarrierRecord>();
-          for (const baseRec of INITIAL_CARRIER_RECORDS) {
-            if (!deletedIds.has(baseRec.id)) {
-              mergedMap.set(baseRec.id, baseRec);
-            }
-          }
-          for (const storedRec of parsed) {
-            if (storedRec && storedRec.id && !deletedIds.has(storedRec.id)) {
-              mergedMap.set(storedRec.id, storedRec);
-            }
-          }
-          return Array.from(mergedMap.values());
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load carriers from localStorage:', e);
-    }
-    return INITIAL_CARRIER_RECORDS;
-  });
+  const [records, setRecords] = useState<CarrierRecord[]>(() => INITIAL_CARRIER_RECORDS);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [lobFilter, setLobFilter] = useState<CarrierLobFilter>('all');
@@ -61,9 +33,15 @@ export function useCarriers(
   const [sortOption, setSortOption] = useState<CarrierSortOption>('name_asc');
   const [selectedId, setSelectedId] = useState<string>('');
 
-  // Hydrate from shared MongoDB database on mount
+  // Load records from shared MongoDB database on page load
   useEffect(() => {
     let mounted = true;
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(DELETED_IDS_KEY);
+    } catch {
+      // ignore
+    }
     fetchDirectoryFromMongo().then((res) => {
       if (mounted && res && res.source === 'mongodb' && Array.isArray(res.carriers) && res.carriers.length > 0) {
         setRecords(res.carriers);
@@ -73,15 +51,6 @@ export function useCarriers(
       mounted = false;
     };
   }, []);
-
-  // Persist to localStorage cache on change
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    } catch (e) {
-      console.error('Failed to save carriers to localStorage:', e);
-    }
-  }, [records]);
 
   const filteredRecords = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -224,52 +193,52 @@ export function useCarriers(
         LastUpdated: today
       };
       setRecords((prev) => [newRecord, ...prev]);
-      syncCreateCarrier(newRecord);
+      syncCreateCarrier(newRecord).then((ok) => {
+        if (!ok && onToast) {
+          onToast('Database Sync Error', `Could not save "${newRecord.Carrier}" to MongoDB. Verify your Admin session.`, 'error');
+        }
+      });
       return newId;
     },
-    [records]
+    [records, onToast]
   );
 
   const updateRecord = useCallback(
     (id: string, data: Omit<CarrierRecord, 'id' | 'LastUpdated'>) => {
+      const existing = records.find((rec) => rec.id === id);
+      if (!existing) return;
       const today = new Date().toISOString().split('T')[0];
-      setRecords((prev) =>
-        prev.map((rec) => {
-          if (rec.id === id) {
-            const updated: CarrierRecord = {
-              ...rec,
-              ...data,
-              id,
-              LastUpdated: today
-            };
-            syncUpdateCarrier(id, updated);
-            return updated;
-          }
-          return rec;
-        })
-      );
+      const updated: CarrierRecord = {
+        ...existing,
+        ...data,
+        id,
+        LastUpdated: today
+      };
+      setRecords((prev) => prev.map((rec) => (rec.id === id ? updated : rec)));
+      syncUpdateCarrier(id, updated).then((ok) => {
+        if (!ok && onToast) {
+          onToast('Database Sync Error', `Could not update "${updated.Carrier}" in MongoDB. Verify your Admin session.`, 'error');
+        }
+      });
     },
-    []
+    [records, onToast]
   );
 
   const deleteRecord = useCallback(
     (id: string) => {
       setRecords((prev) => prev.filter((r) => r.id !== id));
-      syncDeleteCarrier(id);
-      try {
-        const deletedRaw = localStorage.getItem(DELETED_IDS_KEY);
-        const deletedIds = new Set<string>(deletedRaw ? JSON.parse(deletedRaw) : []);
-        deletedIds.add(id);
-        localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(Array.from(deletedIds)));
-      } catch {
-        // ignore
-      }
       if (selectedId === id) {
         setSelectedId('');
       }
-      if (onToast) {
-        onToast('Carrier Deleted', 'Carrier record removed from MongoDB.', 'info');
-      }
+      syncDeleteCarrier(id).then((ok) => {
+        if (onToast) {
+          if (ok) {
+            onToast('Carrier Deleted', 'Carrier record removed from MongoDB.', 'info');
+          } else {
+            onToast('Database Sync Error', 'Could not delete carrier from MongoDB. Verify your Admin session.', 'error');
+          }
+        }
+      });
     },
     [selectedId, onToast]
   );

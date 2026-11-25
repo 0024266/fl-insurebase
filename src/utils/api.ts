@@ -103,17 +103,45 @@ export interface DirectoryRecordsResponse {
 
 let cachedDirectoryPromise: Promise<DirectoryRecordsResponse | null> | null = null;
 
+export function invalidateDirectoryCache(): void {
+  cachedDirectoryPromise = null;
+}
+
 export function fetchDirectoryFromMongo(forceRefresh = false): Promise<DirectoryRecordsResponse | null> {
   if (!forceRefresh && cachedDirectoryPromise) {
     return cachedDirectoryPromise;
   }
-  cachedDirectoryPromise = fetch('/api/records')
-    .then(async (res) => {
-      if (!res.ok) return null;
-      return (await res.json()) as DirectoryRecordsResponse;
-    })
-    .catch(() => null);
-  return cachedDirectoryPromise;
+  const fetchPromise = (async () => {
+    try {
+      const res = await fetch('/api/records', { cache: 'no-store' });
+      if (res.ok) {
+        const data = (await res.json()) as DirectoryRecordsResponse;
+        if (data && data.source === 'mongodb') {
+          return data;
+        }
+      }
+    } catch {
+      // ignore local fetch error and try remote worker endpoint
+    }
+    try {
+      const remoteRes = await fetch('https://fl-insurebase.info-dir.workers.dev/api/records', {
+        cache: 'no-store'
+      });
+      if (remoteRes.ok) {
+        const remoteData = (await remoteRes.json()) as DirectoryRecordsResponse;
+        if (remoteData && remoteData.source === 'mongodb') {
+          return remoteData;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    cachedDirectoryPromise = null;
+    return null;
+  })();
+
+  cachedDirectoryPromise = fetchPromise;
+  return fetchPromise;
 }
 
 // --- Mortgage API Sync Helpers ---
@@ -125,6 +153,7 @@ export async function syncCreateMortgage(record: MortgageRecord): Promise<boolea
       headers: getAuthHeaders(),
       body: JSON.stringify({ ...record, recordId })
     });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;
@@ -138,6 +167,7 @@ export async function syncUpdateMortgage(id: string, record: MortgageRecord): Pr
       headers: getAuthHeaders(),
       body: JSON.stringify({ ...record, recordId: id })
     });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;
@@ -150,6 +180,28 @@ export async function syncDeleteMortgage(id: string): Promise<boolean> {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
+    if (res.ok) invalidateDirectoryCache();
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function syncBatchMortgages(
+  records: MortgageRecord[],
+  mode: 'merge' | 'replace'
+): Promise<boolean> {
+  try {
+    const payloadRecords = records.map((r) => ({
+      ...r,
+      recordId: getRecordId(r)
+    }));
+    const res = await fetch('/api/mortgages/batch', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ records: payloadRecords, mode })
+    });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;
@@ -165,6 +217,7 @@ export async function syncCreatePermit(record: FloridaZipRecord): Promise<boolea
       headers: getAuthHeaders(),
       body: JSON.stringify({ ...record, recordId })
     });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;
@@ -178,6 +231,7 @@ export async function syncUpdatePermit(id: string, record: FloridaZipRecord): Pr
       headers: getAuthHeaders(),
       body: JSON.stringify({ ...record, recordId: id })
     });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;
@@ -190,6 +244,7 @@ export async function syncDeletePermit(id: string): Promise<boolean> {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;
@@ -203,6 +258,28 @@ export async function syncBulkUpdatePermits(options: BulkUpdateLinksOptions): Pr
       headers: getAuthHeaders(),
       body: JSON.stringify(options)
     });
+    if (res.ok) invalidateDirectoryCache();
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function syncBatchPermits(
+  records: FloridaZipRecord[],
+  mode: 'merge' | 'replace'
+): Promise<boolean> {
+  try {
+    const payloadRecords = records.map((r) => ({
+      ...r,
+      recordId: getPermitRecordId(r)
+    }));
+    const res = await fetch('/api/permits/batch', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ records: payloadRecords, mode })
+    });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;
@@ -217,6 +294,7 @@ export async function syncCreateCarrier(record: CarrierRecord): Promise<boolean>
       headers: getAuthHeaders(),
       body: JSON.stringify(record)
     });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;
@@ -230,6 +308,7 @@ export async function syncUpdateCarrier(id: string, record: CarrierRecord): Prom
       headers: getAuthHeaders(),
       body: JSON.stringify(record)
     });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;
@@ -242,6 +321,7 @@ export async function syncDeleteCarrier(id: string): Promise<boolean> {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
+    if (res.ok) invalidateDirectoryCache();
     return res.ok;
   } catch {
     return false;

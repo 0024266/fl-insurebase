@@ -17,65 +17,17 @@ import {
   fetchDirectoryFromMongo,
   syncCreateMortgage,
   syncUpdateMortgage,
-  syncDeleteMortgage
+  syncDeleteMortgage,
+  syncBatchMortgages
 } from '../utils/api';
 
 const STORAGE_KEY = 'agency_mortgage_db';
 
 export function useMortgages() {
-  // Load initial data - automatically deduplicate & normalize to clean master dataset with auto-merge for updates
-  const [records, setRecords] = useState<MortgageRecord[]>(() => {
-    try {
-      const stored =
-        localStorage.getItem(STORAGE_KEY) ||
-        localStorage.getItem('mortgagee_directory_v3');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Index stored records by ID
-          const storedMap = new Map<string, MortgageRecord>();
-          for (const r of parsed) {
-            const id = getRecordId(r);
-            if (id) storedMap.set(id, r);
-          }
-
-          // Merge any newly introduced or updated records from INITIAL_DATASET
-          for (const initRec of INITIAL_DATASET) {
-            const initId = getRecordId(initRec);
-            if (!initId) continue;
-            const existing = storedMap.get(initId);
-            if (!existing) {
-              storedMap.set(initId, initRec);
-            } else if (
-              initRec.LastUpdated &&
-              (!existing.LastUpdated || initRec.LastUpdated > existing.LastUpdated)
-            ) {
-              storedMap.set(initId, { ...existing, ...initRec });
-            }
-          }
-
-          const merged = deduplicateRecords(Array.from(storedMap.values()));
-          // Update storage with fresh merged records
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-          } catch {
-            // ignore
-          }
-          return merged;
-        }
-      }
-    } catch (e) {
-      console.error('Error reading localStorage:', e);
-    }
-    // Deduplicate and enrich raw dataset
-    const initial = deduplicateRecords(INITIAL_DATASET);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-    } catch {
-      // ignore
-    }
-    return initial;
-  });
+  // Initialize with seed dataset while MongoDB loads
+  const [records, setRecords] = useState<MortgageRecord[]>(() =>
+    deduplicateRecords(INITIAL_DATASET)
+  );
 
   // Selected Record ID (defaults to empty so reload stays on list view)
   const [selectedId, setSelectedId] = useState<string>('');
@@ -102,9 +54,15 @@ export function useMortgages() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Hydrate from shared MongoDB database on mount
+  // Load records from shared MongoDB database on page load
   useEffect(() => {
     let mounted = true;
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('mortgagee_directory_v3');
+    } catch {
+      // ignore
+    }
     fetchDirectoryFromMongo().then((res) => {
       if (mounted && res && res.source === 'mongodb' && Array.isArray(res.mortgages) && res.mortgages.length > 0) {
         setRecords(deduplicateRecords(res.mortgages));
@@ -114,15 +72,6 @@ export function useMortgages() {
       mounted = false;
     };
   }, []);
-
-  // Persist to localStorage cache whenever records change
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    } catch (e) {
-      console.error('Failed to save to localStorage:', e);
-    }
-  }, [records]);
 
   // Toast helper
   const addToast = useCallback((title: string, description?: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -279,29 +228,39 @@ export function useMortgages() {
 
     setRecords(prev => [newRecord, ...prev]);
     setSelectedId(newId);
-    syncCreateMortgage(newRecord);
-    addToast('Record Created', `"${newRecord.Name}" added and synced to MongoDB.`, 'success');
+    syncCreateMortgage(newRecord).then((ok) => {
+      if (ok) {
+        addToast('Record Created', `"${newRecord.Name}" added and synced to MongoDB.`, 'success');
+      } else {
+        addToast('Database Sync Error', `Could not save "${newRecord.Name}" to MongoDB. Verify your Admin session.`, 'error');
+      }
+    });
     return newId;
   }, [addToast]);
 
   // CRUD: Update
   const updateRecord = useCallback((id: string, updatedFields: Partial<MortgageRecord>) => {
+    const existing = records.find(item => getRecordId(item) === id);
+    if (!existing) return;
+
+    const updated: MortgageRecord = {
+      ...existing,
+      ...updatedFields,
+      LastUpdated: formatCurrentTimestamp()
+    };
+
     setRecords(prev =>
-      prev.map(item => {
-        if (getRecordId(item) === id) {
-          const updated: MortgageRecord = {
-            ...item,
-            ...updatedFields,
-            LastUpdated: formatCurrentTimestamp()
-          };
-          syncUpdateMortgage(id, updated);
-          return updated;
-        }
-        return item;
-      })
+      prev.map(item => (getRecordId(item) === id ? updated : item))
     );
-    addToast('Record Updated', `Changes saved and synced to MongoDB.`, 'success');
-  }, [addToast]);
+
+    syncUpdateMortgage(id, updated).then((ok) => {
+      if (ok) {
+        addToast('Record Updated', 'Changes saved and synced to MongoDB.', 'success');
+      } else {
+        addToast('Database Sync Error', 'Could not save changes to MongoDB. Verify your Admin session.', 'error');
+      }
+    });
+  }, [records, addToast]);
 
   // CRUD: Delete
   const deleteRecord = useCallback((id: string) => {
@@ -313,8 +272,13 @@ export function useMortgages() {
       }
       return remaining;
     });
-    syncDeleteMortgage(id);
-    addToast('Record Deleted', `"${itemToDelete?.Name || 'Record'}" removed from MongoDB.`, 'info');
+    syncDeleteMortgage(id).then((ok) => {
+      if (ok) {
+        addToast('Record Deleted', `"${itemToDelete?.Name || 'Record'}" removed from MongoDB.`, 'info');
+      } else {
+        addToast('Database Sync Error', 'Could not delete record from MongoDB. Verify your Admin session.', 'error');
+      }
+    });
   }, [records, selectedId, addToast]);
 
   // Reset search and filters (safe for public & regular use - preserves imported records)
@@ -346,7 +310,13 @@ export function useMortgages() {
     setHasPortalOnly(false);
     setHasFaxOnly(false);
     setSortOption('name_asc');
-    addToast('Database Reset', `Reverted to ${sanitized.length} default mortgage records.`, 'info');
+    syncBatchMortgages(sanitized, 'replace').then((ok) => {
+      if (ok) {
+        addToast('Database Reset', `Reverted and synced ${sanitized.length} default mortgage records to MongoDB.`, 'info');
+      } else {
+        addToast('Database Sync Error', 'Could not sync factory reset to MongoDB. Verify your Admin session.', 'error');
+      }
+    });
   }, [addToast]);
 
   // Export Data (JSON or CSV)
@@ -392,7 +362,14 @@ export function useMortgages() {
 
   // Import Data (merge or replace)
   const importRecords = useCallback((incoming: MortgageRecord[], mode: 'merge' | 'replace') => {
-    const valid = incoming.filter(r => r && r.Name && r.Name.trim() !== '' && r.Name.toLowerCase() !== 'delete');
+    const valid = incoming
+      .filter(r => r && r.Name && r.Name.trim() !== '' && r.Name.toLowerCase() !== 'delete')
+      .map(r => ({
+        ...r,
+        _id: r._id || { $oid: generateObjectId() },
+        LastUpdated: r.LastUpdated || formatCurrentTimestamp()
+      }));
+
     if (valid.length === 0) {
       addToast('Import Failed', 'No valid mortgage records found in the uploaded file.', 'error');
       return;
@@ -403,31 +380,37 @@ export function useMortgages() {
       if (valid.length > 0) {
         setSelectedId(getRecordId(valid[0]));
       }
-      addToast('Import Successful', `Replaced directory with ${valid.length} records.`, 'success');
+      syncBatchMortgages(valid, 'replace').then((ok) => {
+        if (ok) {
+          addToast('Import Successful', `Replaced and synced directory with ${valid.length} records to MongoDB.`, 'success');
+        } else {
+          addToast('Database Sync Error', 'Imported locally, but failed to sync to MongoDB.', 'error');
+        }
+      });
     } else {
       // Merge mode
-      setRecords(prev => {
-        const existingMap = new Map<string, MortgageRecord>();
-        prev.forEach(r => {
-          const id = getRecordId(r) || `${(r.Name || '').toLowerCase()}_${(r.Address || '').toLowerCase()}`;
-          existingMap.set(id, r);
-        });
+      const existingMap = new Map<string, MortgageRecord>();
+      records.forEach(r => {
+        const id = getRecordId(r) || `${(r.Name || '').toLowerCase()}_${(r.Address || '').toLowerCase()}`;
+        existingMap.set(id, r);
+      });
 
-        valid.forEach(r => {
-          const id = getRecordId(r) || `${(r.Name || '').toLowerCase()}_${(r.Address || '').toLowerCase()}`;
-          existingMap.set(id, {
-            ...r,
-            _id: r._id || { $oid: generateObjectId() },
-            LastUpdated: r.LastUpdated || formatCurrentTimestamp()
-          });
-        });
+      valid.forEach(r => {
+        const id = getRecordId(r) || `${(r.Name || '').toLowerCase()}_${(r.Address || '').toLowerCase()}`;
+        existingMap.set(id, r);
+      });
 
-        const merged = Array.from(existingMap.values());
-        addToast('Import Successful', `Merged ${valid.length} records (Total now: ${merged.length}).`, 'success');
-        return merged;
+      const merged = Array.from(existingMap.values());
+      setRecords(merged);
+      syncBatchMortgages(valid, 'merge').then((ok) => {
+        if (ok) {
+          addToast('Import Successful', `Merged and synced ${valid.length} records to MongoDB (Total now: ${merged.length}).`, 'success');
+        } else {
+          addToast('Database Sync Error', 'Merged locally, but failed to sync to MongoDB.', 'error');
+        }
       });
     }
-  }, [addToast]);
+  }, [records, addToast]);
 
   return {
     records,

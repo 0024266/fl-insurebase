@@ -41,7 +41,7 @@ export function renderCcFeeBadge(ccFee?: string | null) {
 
   if (category === 'no_fee') {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/90">
         <CreditCard className="w-3 h-3 text-emerald-700 shrink-0" />
         <span>CC Fee: {label}</span>
       </span>
@@ -50,7 +50,7 @@ export function renderCcFeeBadge(ccFee?: string | null) {
 
   if (category === 'surcharge') {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-900 border border-amber-200/90">
         <CreditCard className="w-3 h-3 text-amber-700 shrink-0" />
         <span>CC Fee: {label}</span>
       </span>
@@ -58,8 +58,8 @@ export function renderCcFeeBadge(ccFee?: string | null) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] text-[11px] font-medium bg-[#f4f5f7] text-[#555555] border border-[#d5d5d5]">
-      <CreditCard className="w-3 h-3 text-[#777777] shrink-0" />
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200/90">
+      <CreditCard className="w-3 h-3 text-slate-500 shrink-0" />
       <span>CC Fee: {label}</span>
     </span>
   );
@@ -71,43 +71,43 @@ export function renderLobBadges(record: CarrierRecord) {
   if (record.Home) {
     badges.push({
       label: 'Home',
-      className: 'bg-[#e8f4fd] text-[#1f4e79] border-[#b6d4fe]'
+      className: 'bg-sky-50 text-sky-800 border-sky-200/90'
     });
   }
   if (record.Auto) {
     badges.push({
       label: 'Auto',
-      className: 'bg-indigo-50 text-indigo-800 border-indigo-200'
+      className: 'bg-indigo-50 text-indigo-800 border-indigo-200/90'
     });
   }
   if (record.Flood) {
     badges.push({
       label: 'Flood',
-      className: 'bg-cyan-50 text-cyan-900 border-cyan-300'
+      className: 'bg-cyan-50 text-cyan-900 border-cyan-200/90'
     });
   }
   if (record.Commercial) {
     badges.push({
       label: 'Commercial',
-      className: 'bg-slate-100 text-slate-800 border-slate-300'
+      className: 'bg-slate-100 text-slate-800 border-slate-200/90'
     });
   }
   if (record.Liability) {
     badges.push({
       label: 'Liability',
-      className: 'bg-purple-50 text-purple-800 border-purple-200'
+      className: 'bg-purple-50 text-purple-800 border-purple-200/90'
     });
   }
   if (record.Personal) {
     badges.push({
       label: 'Personal',
-      className: 'bg-stone-100 text-stone-700 border-stone-300'
+      className: 'bg-stone-100 text-stone-700 border-stone-200/90'
     });
   }
   if (record.Health) {
     badges.push({
       label: 'Health',
-      className: 'bg-rose-50 text-rose-800 border-rose-200'
+      className: 'bg-rose-50 text-rose-800 border-rose-200/90'
     });
   }
 
@@ -116,14 +116,14 @@ export function renderLobBadges(record: CarrierRecord) {
       {badges.map((b) => (
         <span
           key={b.label}
-          className={`px-1.5 py-0.5 text-[10.5px] font-bold rounded-[2px] border ${b.className}`}
+          className={`px-2 py-0.5 text-[10.5px] font-semibold rounded-md border ${b.className}`}
         >
           {b.label}
         </span>
       ))}
       {record.CitizensTakeout && (
-        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10.5px] font-bold rounded-[2px] border bg-amber-100/80 text-amber-950 border-amber-400">
-          <ShieldCheck className="w-2.5 h-2.5 text-amber-800 shrink-0" />
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10.5px] font-semibold rounded-md border bg-amber-50 text-amber-900 border-amber-300/90">
+          <ShieldCheck className="w-3 h-3 text-amber-700 shrink-0" />
           <span>Citizens Takeout</span>
         </span>
       )}
@@ -155,21 +155,21 @@ export function CarrierCard({
   return (
     <div
       onClick={() => onSelect(record.id)}
-      className={`bg-white border rounded-[3px] p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all flex flex-col justify-between cursor-pointer ${
+      className={`bg-white border rounded-xl p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between gap-3.5 cursor-pointer ${
         isSelected
-          ? 'border-[#286090] ring-1 ring-[#286090]/30 bg-[#f5f9fd]'
-          : 'border-[#d5d5d5] hover:border-[#99b3cc]'
+          ? 'border-sky-600 ring-2 ring-sky-500/20 bg-sky-50/30'
+          : 'border-slate-200/90 hover:border-slate-300'
       }`}
     >
       <div>
         {/* Card Header: Carrier Name + CC Fee Badge */}
-        <div className="flex items-start justify-between gap-2 mb-1.5">
+        <div className="flex items-start justify-between gap-2.5 mb-2">
           <div className="min-w-0">
-            <h3 className="text-[14.5px] font-bold text-[#286090] hover:underline leading-snug">
+            <h3 className="text-[14.5px] font-bold text-slate-900 hover:text-sky-700 transition-colors leading-snug">
               <HighlightedText text={record.Carrier} query={searchQuery} />
             </h3>
             {record.OtherNames && record.OtherNames !== record.Carrier && (
-              <p className="text-[11.5px] text-[#666666] truncate mt-0.5">
+              <p className="text-xs text-slate-500 truncate mt-0.5">
                 <HighlightedText text={record.OtherNames} query={searchQuery} />
               </p>
             )}
@@ -178,13 +178,13 @@ export function CarrierCard({
         </div>
 
         {/* LOB & Takeout Badges */}
-        <div className="mb-2.5">{renderLobBadges(record)}</div>
+        <div className="mb-3">{renderLobBadges(record)}</div>
 
         {/* Phone & Email Quick Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[12px] bg-[#f8f9fa] border border-[#e5e7eb] rounded-[2px] p-2 mb-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-slate-50/80 border border-slate-200/70 rounded-lg p-2.5 mb-3">
           <div>
-            <span className="text-[10.5px] text-[#666666] font-semibold block">
-              Customer Service:
+            <span className="text-[10.5px] text-slate-400 uppercase tracking-wider font-semibold block mb-0.5">
+              Customer Service
             </span>
             {record.CustomerServicePhone ? (
               <div className="flex items-center gap-1">
@@ -192,16 +192,16 @@ export function CarrierCard({
                   <a
                     href={csTel}
                     onClick={(e) => e.stopPropagation()}
-                    className="font-bold text-[#222222] hover:text-[#286090] hover:underline inline-flex items-center gap-1"
+                    className="font-mono font-semibold text-slate-800 hover:text-sky-700 hover:underline inline-flex items-center gap-1"
                   >
-                    <Phone className="w-3 h-3 text-[#286090]" />
+                    <Phone className="w-3 h-3 text-sky-700" />
                     <HighlightedText
                       text={record.CustomerServicePhone}
                       query={searchQuery}
                     />
                   </a>
                 ) : (
-                  <span className="font-bold text-[#222222]">
+                  <span className="font-mono font-semibold text-slate-800">
                     {record.CustomerServicePhone}
                   </span>
                 )}
@@ -212,7 +212,7 @@ export function CarrierCard({
                       e.stopPropagation();
                       onQuickCopy('Customer Service Phone', record.CustomerServicePhone);
                     }}
-                    className="p-0.5 text-[#777] hover:text-[#286090] cursor-pointer"
+                    className="p-0.5 text-slate-400 hover:text-sky-700 cursor-pointer transition-colors"
                     title="Copy phone"
                   >
                     <Copy className="w-3 h-3" />
@@ -220,13 +220,13 @@ export function CarrierCard({
                 )}
               </div>
             ) : (
-              <span className="text-[#999999]">—</span>
+              <span className="text-slate-400">—</span>
             )}
           </div>
 
           <div>
-            <span className="text-[10.5px] text-[#666666] font-semibold block">
-              Claims Support:
+            <span className="text-[10.5px] text-slate-400 uppercase tracking-wider font-semibold block mb-0.5">
+              Claims Support
             </span>
             {record.ClaimsPhone ? (
               <div className="flex items-center gap-1">
@@ -234,13 +234,13 @@ export function CarrierCard({
                   <a
                     href={claimsTel}
                     onClick={(e) => e.stopPropagation()}
-                    className="font-bold text-[#222222] hover:text-[#286090] hover:underline inline-flex items-center gap-1"
+                    className="font-mono font-semibold text-slate-800 hover:text-sky-700 hover:underline inline-flex items-center gap-1"
                   >
-                    <AlertCircle className="w-3 h-3 text-rose-700" />
+                    <AlertCircle className="w-3 h-3 text-rose-600" />
                     <HighlightedText text={record.ClaimsPhone} query={searchQuery} />
                   </a>
                 ) : (
-                  <span className="font-bold text-[#222222]">{record.ClaimsPhone}</span>
+                  <span className="font-mono font-semibold text-slate-800">{record.ClaimsPhone}</span>
                 )}
                 {onQuickCopy && (
                   <button
@@ -249,7 +249,7 @@ export function CarrierCard({
                       e.stopPropagation();
                       onQuickCopy('Claims Phone', record.ClaimsPhone);
                     }}
-                    className="p-0.5 text-[#777] hover:text-[#286090] cursor-pointer"
+                    className="p-0.5 text-slate-400 hover:text-sky-700 cursor-pointer transition-colors"
                     title="Copy claims phone"
                   >
                     <Copy className="w-3 h-3" />
@@ -257,39 +257,39 @@ export function CarrierCard({
                 )}
               </div>
             ) : (
-              <span className="text-[#999999]">—</span>
+              <span className="text-slate-400">—</span>
             )}
           </div>
 
           {record.ForAgents && (
             <div>
-              <span className="text-[10.5px] text-[#666666] font-semibold block">
-                Agent Support Line:
+              <span className="text-[10.5px] text-slate-400 uppercase tracking-wider font-semibold block mb-0.5">
+                Agent Support Line
               </span>
               {agentTel ? (
                 <a
                   href={agentTel}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-[#286090] font-semibold hover:underline"
+                  className="text-sky-700 font-mono font-semibold hover:underline"
                 >
                   <HighlightedText text={record.ForAgents} query={searchQuery} />
                 </a>
               ) : (
-                <span className="text-[#333333]">{record.ForAgents}</span>
+                <span className="text-slate-700 font-mono">{record.ForAgents}</span>
               )}
             </div>
           )}
 
           {record.CustomerServiceEmail && (
             <div className="truncate">
-              <span className="text-[10.5px] text-[#666666] font-semibold block">
-                Service Email:
+              <span className="text-[10.5px] text-slate-400 uppercase tracking-wider font-semibold block mb-0.5">
+                Service Email
               </span>
               {csMail ? (
                 <a
                   href={csMail}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-[#286090] hover:underline inline-flex items-center gap-1 truncate max-w-full"
+                  className="text-sky-700 hover:underline inline-flex items-center gap-1 truncate max-w-full font-medium"
                 >
                   <Mail className="w-3 h-3 shrink-0" />
                   <span className="truncate">
@@ -300,22 +300,22 @@ export function CarrierCard({
                   </span>
                 </a>
               ) : (
-                <span className="text-[#444] truncate">{record.CustomerServiceEmail}</span>
+                <span className="text-slate-600 truncate">{record.CustomerServiceEmail}</span>
               )}
             </div>
           )}
         </div>
 
-        {/* Notes Preview with Safe <br> Line Breaks */}
+        {/* Notes Preview */}
         {noteLines.length > 0 && (
-          <div className="text-[11.5px] text-[#444444] bg-amber-50/50 border border-amber-200/70 rounded-[2px] px-2.5 py-1.5 mb-2.5 space-y-0.5 max-h-20 overflow-y-auto">
+          <div className="text-xs text-slate-700 bg-amber-50/60 border border-amber-200/70 rounded-lg px-3 py-2 space-y-0.5 max-h-20 overflow-y-auto">
             {noteLines.slice(0, 3).map((line, i) => (
               <div key={i} className="leading-snug">
                 <HighlightedText text={line} query={searchQuery} />
               </div>
             ))}
             {noteLines.length > 3 && (
-              <div className="text-[10.5px] text-[#286090] font-semibold">
+              <div className="text-[10.5px] text-sky-700 font-semibold">
                 +{noteLines.length - 3} more line(s)...
               </div>
             )}
@@ -325,7 +325,7 @@ export function CarrierCard({
 
       {/* Desk-Priority Action Buttons Footer */}
       <div
-        className="pt-2.5 border-t border-[#e8e8e8] flex flex-wrap items-center gap-1.5"
+        className="pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-1.5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. Prominent Primary Make Payment Button */}
@@ -334,7 +334,7 @@ export function CarrierCard({
             href={paymentUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="qq-btn-green py-1 px-2.5 text-[11.5px] font-bold inline-flex items-center gap-1 shadow-2xs"
+            className="py-1 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white border border-sky-700/80 text-xs font-semibold inline-flex items-center gap-1 shadow-2xs transition-colors"
             title={`Make a payment for ${record.Carrier}`}
           >
             <CreditCard className="w-3.5 h-3.5" />
@@ -342,7 +342,7 @@ export function CarrierCard({
             <ExternalLink className="w-2.5 h-2.5 opacity-80" />
           </a>
         ) : (
-          <span className="text-[11px] text-[#999999] py-1 px-2 border border-[#e5e5e5] rounded-[2px] bg-[#fafafa]">
+          <span className="text-[11px] text-slate-400 py-1 px-2 border border-slate-200/70 rounded-lg bg-slate-50/70">
             No Payment Link
           </span>
         )}
@@ -353,10 +353,10 @@ export function CarrierCard({
             href={agentPortalUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="qq-btn-secondary py-1 px-2.5 text-[11.5px] font-bold text-[#286090] inline-flex items-center gap-1 shadow-2xs"
+            className="py-1 px-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs font-semibold inline-flex items-center gap-1 shadow-2xs transition-colors"
             title={`Open Agent Portal for ${record.Carrier}`}
           >
-            <KeyRound className="w-3 h-3 text-[#286090]" />
+            <KeyRound className="w-3 h-3 text-sky-700" />
             <span>Agent Portal</span>
             <ExternalLink className="w-2.5 h-2.5 opacity-70" />
           </a>
@@ -368,10 +368,10 @@ export function CarrierCard({
             href={publicWebUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="qq-btn-secondary py-1 px-2 text-[11px] font-semibold text-[#444444] inline-flex items-center gap-1"
+            className="py-1 px-2 rounded-lg bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/90 text-xs font-medium inline-flex items-center gap-1 transition-colors"
             title={`Public Website: ${publicWebUrl}`}
           >
-            <Globe className="w-3 h-3 text-[#286090]" />
+            <Globe className="w-3 h-3 text-slate-500" />
             <span>Website</span>
           </a>
         ) : null}
@@ -381,9 +381,9 @@ export function CarrierCard({
           <button
             type="button"
             onClick={() => onSelect(record.id)}
-            className="qq-btn-secondary py-1 px-2 text-[11.5px] font-bold text-[#286090] inline-flex items-center gap-1 cursor-pointer"
+            className="py-1 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
           >
-            <Eye className="w-3.5 h-3.5" />
+            <Eye className="w-3.5 h-3.5 text-slate-600" />
             <span>Quick View</span>
           </button>
 
@@ -393,7 +393,7 @@ export function CarrierCard({
                 <button
                   type="button"
                   onClick={() => onEdit(record)}
-                  className="p-1 rounded text-[#286090] hover:bg-[#e8f1f8] cursor-pointer"
+                  className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 cursor-pointer transition-colors"
                   title="Edit Carrier"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
@@ -403,7 +403,7 @@ export function CarrierCard({
                 <button
                   type="button"
                   onClick={() => onDuplicate(record)}
-                  className="p-1 rounded text-[#1e7e34] hover:bg-[#e9f7ec] cursor-pointer"
+                  className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 cursor-pointer transition-colors"
                   title="Duplicate & Edit Carrier"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -421,7 +421,7 @@ export function CarrierCard({
                       onDelete(record.id);
                     }
                   }}
-                  className="p-1 rounded text-rose-700 hover:bg-rose-50 cursor-pointer"
+                  className="p-1.5 rounded-lg text-rose-700 hover:bg-rose-50 cursor-pointer transition-colors"
                   title="Delete Carrier"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

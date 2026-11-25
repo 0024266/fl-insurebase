@@ -6,7 +6,6 @@ import {
   PermitStats,
   BulkUpdateLinksOptions
 } from '../types/permits';
-import { ToastMessage } from '../types/mortgage';
 import { INITIAL_FLORIDA_PERMIT_DATASET } from '../data/initialPermitRecords';
 import {
   getPermitRecordId,
@@ -21,7 +20,8 @@ import {
   syncCreatePermit,
   syncUpdatePermit,
   syncDeletePermit,
-  syncBulkUpdatePermits
+  syncBulkUpdatePermits,
+  syncBatchPermits
 } from '../utils/api';
 
 const PERMIT_STORAGE_KEY = 'agency_fl_permits_db';
@@ -29,37 +29,10 @@ const PERMIT_STORAGE_KEY = 'agency_fl_permits_db';
 export function useFloridaPermits(
   addToast: (title: string, description?: string, type?: 'success' | 'info' | 'error') => void
 ) {
-  // Load initial data from localStorage or seed dataset
-  const [records, setRecords] = useState<FloridaZipRecord[]>(() => {
-    try {
-      const stored = localStorage.getItem(PERMIT_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Normalize and upgrade any known legacy URLs like Marion County Property Appraiser
-          const sanitized = parsed.map((item: FloridaZipRecord) => {
-            if (
-              item &&
-              (item.County === 'MARION' || String(item.County).toUpperCase() === 'MARION') &&
-              (!item.PAlink ||
-                item.PAlink === 'https://www.pa.marion.fl.us/' ||
-                item.PAlink === 'https://www.pa.marion.fl.us' ||
-                item.PAlink === 'http://www.pa.marion.fl.us/')
-            ) {
-              return { ...item, PAlink: 'https://www.pa.marion.fl.us/PropertySearch.aspx' };
-            }
-            return item;
-          });
-          // Merge with initial dataset to ensure all new records are available
-          const combined = [...INITIAL_FLORIDA_PERMIT_DATASET, ...sanitized];
-          return deduplicatePermitRecords(combined);
-        }
-      }
-    } catch (e) {
-      console.error('Error reading permit localStorage:', e);
-    }
-    return deduplicatePermitRecords(INITIAL_FLORIDA_PERMIT_DATASET);
-  });
+  // Initialize with seed dataset while MongoDB loads
+  const [records, setRecords] = useState<FloridaZipRecord[]>(() =>
+    deduplicatePermitRecords(INITIAL_FLORIDA_PERMIT_DATASET)
+  );
 
   // Selected Record ID (defaults to empty so reload stays on list view)
   const [selectedId, setSelectedId] = useState<string>('');
@@ -91,9 +64,14 @@ export function useFloridaPermits(
     setCurrentPage(1);
   }, [debouncedQuery, countyFilter, cityFilter, terrainFilter, hasCityPermitOnly, hasCountyPermitOnly, sortOption, pageSize]);
 
-  // Hydrate from shared MongoDB database on mount
+  // Load records from shared MongoDB database on page load
   useEffect(() => {
     let mounted = true;
+    try {
+      localStorage.removeItem(PERMIT_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
     fetchDirectoryFromMongo().then((res) => {
       if (mounted && res && res.source === 'mongodb' && Array.isArray(res.permits) && res.permits.length > 0) {
         setRecords(deduplicatePermitRecords(res.permits));
@@ -103,15 +81,6 @@ export function useFloridaPermits(
       mounted = false;
     };
   }, []);
-
-  // Save to localStorage cache
-  useEffect(() => {
-    try {
-      localStorage.setItem(PERMIT_STORAGE_KEY, JSON.stringify(records));
-    } catch (e) {
-      console.error('Failed to save permits to localStorage:', e);
-    }
-  }, [records]);
 
   // Unique list of Florida Counties for the dropdown
   const uniqueCounties = useMemo(() => {
@@ -278,32 +247,42 @@ export function useFloridaPermits(
 
     setRecords(prev => [newRecord, ...prev]);
     setSelectedId(newId);
-    syncCreatePermit(newRecord);
-    addToast('Permit Record Created', `ZIP ${newRecord.zip} (${newRecord.City}) added and synced to MongoDB.`, 'success');
+    syncCreatePermit(newRecord).then((ok) => {
+      if (ok) {
+        addToast('Permit Record Created', `ZIP ${newRecord.zip} (${newRecord.City}) added and synced to MongoDB.`, 'success');
+      } else {
+        addToast('Database Sync Error', `Could not save ZIP ${newRecord.zip} to MongoDB. Verify your Admin session.`, 'error');
+      }
+    });
     return newId;
   }, [addToast]);
 
   // CRUD: Update
   const updateRecord = useCallback((id: string, updatedFields: Partial<FloridaZipRecord>) => {
+    const existing = records.find(item => getPermitRecordId(item) === id);
+    if (!existing) return;
+
+    const updated: FloridaZipRecord = {
+      ...existing,
+      ...updatedFields,
+      zip: updatedFields.zip !== undefined ? formatZipCode(updatedFields.zip) : existing.zip,
+      City: updatedFields.City !== undefined ? updatedFields.City.trim() : existing.City,
+      County: updatedFields.County !== undefined ? updatedFields.County.trim().toUpperCase() : existing.County,
+      LastUpdated: formatCurrentTimestamp()
+    };
+
     setRecords(prev =>
-      prev.map(item => {
-        if (getPermitRecordId(item) === id) {
-          const updated: FloridaZipRecord = {
-            ...item,
-            ...updatedFields,
-            zip: updatedFields.zip !== undefined ? formatZipCode(updatedFields.zip) : item.zip,
-            City: updatedFields.City !== undefined ? updatedFields.City.trim() : item.City,
-            County: updatedFields.County !== undefined ? updatedFields.County.trim().toUpperCase() : item.County,
-            LastUpdated: formatCurrentTimestamp()
-          };
-          syncUpdatePermit(id, updated);
-          return updated;
-        }
-        return item;
-      })
+      prev.map(item => (getPermitRecordId(item) === id ? updated : item))
     );
-    addToast('Permit Record Updated', 'Changes saved and synced to MongoDB.', 'success');
-  }, [addToast]);
+
+    syncUpdatePermit(id, updated).then((ok) => {
+      if (ok) {
+        addToast('Permit Record Updated', 'Changes saved and synced to MongoDB.', 'success');
+      } else {
+        addToast('Database Sync Error', 'Could not save permit changes to MongoDB. Verify your Admin session.', 'error');
+      }
+    });
+  }, [records, addToast]);
 
   // CRUD: Delete
   const deleteRecord = useCallback((id: string) => {
@@ -315,8 +294,13 @@ export function useFloridaPermits(
       }
       return remaining;
     });
-    syncDeletePermit(id);
-    addToast('Record Deleted', `ZIP ${itemToDelete?.zip || ''} removed from MongoDB.`, 'info');
+    syncDeletePermit(id).then((ok) => {
+      if (ok) {
+        addToast('Record Deleted', `ZIP ${itemToDelete?.zip || ''} removed from MongoDB.`, 'info');
+      } else {
+        addToast('Database Sync Error', 'Could not delete permit record from MongoDB. Verify your Admin session.', 'error');
+      }
+    });
   }, [records, selectedId, addToast]);
 
   // Bulk update links across multiple records matching criteria
@@ -344,101 +328,109 @@ export function useFloridaPermits(
 
       let changedCount = 0;
 
-      setRecords(prev => {
-        return prev.map(rec => {
-          const recId = getPermitRecordId(rec);
-          if (idsSet && !idsSet.has(recId)) {
-            return rec;
-          }
-
-          const recCity = (rec.City || '').trim().toUpperCase();
-          const recCounty = (rec.County || '').trim().toUpperCase();
-          const recZip = formatZipCode(rec.zip);
-
-          // Evaluate scope match
-          let matches = false;
-          if (scope === 'city') {
-            matches = normCity ? recCity === normCity : false;
-          } else if (scope === 'county') {
-            matches = normCounty ? recCounty === normCounty : false;
-          } else if (scope === 'city_and_county') {
-            matches =
-              (normCity ? recCity === normCity : true) &&
-              (normCounty ? recCounty === normCounty : true);
-          } else if (scope === 'zips') {
-            matches = zipsSet.has(recZip);
-          } else if (scope === 'filtered') {
-            matches = idsSet ? idsSet.has(recId) : true;
-          }
-
-          if (!matches) {
-            return rec;
-          }
-
-          let recChanged = false;
-          let paLink = rec.PAlink;
-          let countyPermit = rec.PermitByCounty;
-          let cityPermit = rec.PermitByCity;
-
-          if (updatePaLink) {
-            const trimmed = (newPaLink || '').trim();
-            const val = trimmed ? trimmed : null;
-            if (!onlyIfEmpty || !paLink) {
-              if (paLink !== val) {
-                paLink = val;
-                recChanged = true;
-              }
-            }
-          }
-
-          if (updateCountyPermitLink) {
-            const trimmed = (newCountyPermitLink || '').trim();
-            const val = trimmed ? trimmed : null;
-            if (!onlyIfEmpty || !countyPermit) {
-              if (countyPermit !== val) {
-                countyPermit = val;
-                recChanged = true;
-              }
-            }
-          }
-
-          if (updateCityPermitLink) {
-            const trimmed = (newCityPermitLink || '').trim();
-            const val = trimmed ? trimmed : null;
-            if (!onlyIfEmpty || !cityPermit) {
-              if (cityPermit !== val) {
-                cityPermit = val;
-                recChanged = true;
-              }
-            }
-          }
-
-          if (recChanged) {
-            changedCount++;
-            return {
-              ...rec,
-              PAlink: paLink,
-              PermitByCounty: countyPermit,
-              PermitByCity: cityPermit,
-              LastUpdated: formatCurrentTimestamp()
-            };
-          }
-
+      const nextRecords = records.map(rec => {
+        const recId = getPermitRecordId(rec);
+        if (idsSet && !idsSet.has(recId)) {
           return rec;
-        });
+        }
+
+        const recCity = (rec.City || '').trim().toUpperCase();
+        const recCounty = (rec.County || '').trim().toUpperCase();
+        const recZip = formatZipCode(rec.zip);
+
+        // Evaluate scope match
+        let matches = false;
+        if (scope === 'city') {
+          matches = normCity ? recCity === normCity : false;
+        } else if (scope === 'county') {
+          matches = normCounty ? recCounty === normCounty : false;
+        } else if (scope === 'city_and_county') {
+          matches =
+            (normCity ? recCity === normCity : true) &&
+            (normCounty ? recCounty === normCounty : true);
+        } else if (scope === 'zips') {
+          matches = zipsSet.has(recZip);
+        } else if (scope === 'filtered') {
+          matches = idsSet ? idsSet.has(recId) : true;
+        }
+
+        if (!matches) {
+          return rec;
+        }
+
+        let recChanged = false;
+        let paLink = rec.PAlink;
+        let countyPermit = rec.PermitByCounty;
+        let cityPermit = rec.PermitByCity;
+
+        if (updatePaLink) {
+          const trimmed = (newPaLink || '').trim();
+          const val = trimmed ? trimmed : null;
+          if (!onlyIfEmpty || !paLink) {
+            if (paLink !== val) {
+              paLink = val;
+              recChanged = true;
+            }
+          }
+        }
+
+        if (updateCountyPermitLink) {
+          const trimmed = (newCountyPermitLink || '').trim();
+          const val = trimmed ? trimmed : null;
+          if (!onlyIfEmpty || !countyPermit) {
+            if (countyPermit !== val) {
+              countyPermit = val;
+              recChanged = true;
+            }
+          }
+        }
+
+        if (updateCityPermitLink) {
+          const trimmed = (newCityPermitLink || '').trim();
+          const val = trimmed ? trimmed : null;
+          if (!onlyIfEmpty || !cityPermit) {
+            if (cityPermit !== val) {
+              cityPermit = val;
+              recChanged = true;
+            }
+          }
+        }
+
+        if (recChanged) {
+          changedCount++;
+          return {
+            ...rec,
+            PAlink: paLink,
+            PermitByCounty: countyPermit,
+            PermitByCity: cityPermit,
+            LastUpdated: formatCurrentTimestamp()
+          };
+        }
+
+        return rec;
       });
 
-      syncBulkUpdatePermits(options);
+      setRecords(nextRecords);
 
-      addToast(
-        'Bulk Link Update Applied',
-        `Successfully updated and synced portal links for ${changedCount} record${changedCount === 1 ? '' : 's'} to MongoDB.`,
-        'success'
-      );
+      syncBulkUpdatePermits(options).then((ok) => {
+        if (ok) {
+          addToast(
+            'Bulk Link Update Applied',
+            `Successfully updated and synced portal links for ${changedCount} record${changedCount === 1 ? '' : 's'} to MongoDB.`,
+            'success'
+          );
+        } else {
+          addToast(
+            'Database Sync Error',
+            'Could not save bulk link updates to MongoDB. Verify your Admin session.',
+            'error'
+          );
+        }
+      });
 
       return changedCount;
     },
-    [addToast]
+    [records, addToast]
   );
 
   // Reset search and filters (safe for public & regular use - preserves imported records)
@@ -472,7 +464,13 @@ export function useFloridaPermits(
     setHasCountyPermitOnly(false);
     setSortOption('zip_asc');
     setCurrentPage(1);
-    addToast('Database Reset', `Reverted to ${sanitized.length} default Florida ZIP records.`, 'info');
+    syncBatchPermits(sanitized, 'replace').then((ok) => {
+      if (ok) {
+        addToast('Database Reset', `Reverted and synced ${sanitized.length} default Florida ZIP records to MongoDB.`, 'info');
+      } else {
+        addToast('Database Sync Error', 'Could not sync factory reset to MongoDB. Verify your Admin session.', 'error');
+      }
+    });
   }, [addToast]);
 
   // Export Data (JSON or CSV)
@@ -530,16 +528,26 @@ export function useFloridaPermits(
         setSelectedId(getPermitRecordId(sanitized[0]));
       }
       setCurrentPage(1);
-      addToast('Import Successful', `Replaced permit directory with ${sanitized.length} records.`, 'success');
+      syncBatchPermits(sanitized, 'replace').then((ok) => {
+        if (ok) {
+          addToast('Import Successful', `Replaced and synced permit directory with ${sanitized.length} records to MongoDB.`, 'success');
+        } else {
+          addToast('Database Sync Error', 'Imported locally, but failed to sync to MongoDB.', 'error');
+        }
+      });
     } else {
       // Merge mode
-      setRecords(prev => {
-        const merged = deduplicatePermitRecords([...prev, ...sanitized]);
-        addToast('Import Successful', `Merged ${sanitized.length} records (Total now: ${merged.length}).`, 'success');
-        return merged;
+      const merged = deduplicatePermitRecords([...records, ...sanitized]);
+      setRecords(merged);
+      syncBatchPermits(sanitized, 'merge').then((ok) => {
+        if (ok) {
+          addToast('Import Successful', `Merged and synced ${sanitized.length} records to MongoDB (Total now: ${merged.length}).`, 'success');
+        } else {
+          addToast('Database Sync Error', 'Merged locally, but failed to sync to MongoDB.', 'error');
+        }
       });
     }
-  }, [addToast]);
+  }, [records, addToast]);
 
   return {
     records,

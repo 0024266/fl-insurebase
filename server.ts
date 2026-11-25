@@ -22,10 +22,43 @@ let seedPromise: Promise<void> | null = null;
 
 // In-memory fallback auth state when DB is not yet connected
 let fallbackAdminAuth: { salt: string; hash: string } | null = null;
-
-// Active admin bearer tokens stored in server memory (token -> expiry epoch ms)
-const activeAdminTokens = new Map<string, number>();
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+// Per-IP login rate limiter (5 failed attempts per 60s window)
+const LOGIN_WINDOW_MS = 60 * 1000;
+const MAX_LOGIN_ATTEMPTS = 5;
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function getClientIp(req: Request): string {
+  const xff = req.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.trim()) {
+    return xff.split(',')[0].trim();
+  }
+  return req.socket.remoteAddress || 'unknown';
+}
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    return false;
+  }
+  return entry.count >= MAX_LOGIN_ATTEMPTS;
+}
+
+function recordFailedAttempt(ip: string): void {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+  } else {
+    entry.count += 1;
+  }
+}
+
+function clearFailedAttempts(ip: string): void {
+  loginAttempts.delete(ip);
+}
 
 function sanitizeString(val: unknown, maxLen = 2000): string {
   if (typeof val !== 'string') return '';
@@ -37,6 +70,20 @@ function sanitizeNullableString(val: unknown, maxLen = 2000): string | null {
   if (typeof val !== 'string') return null;
   const trimmed = val.trim().slice(0, maxLen);
   return trimmed ? trimmed : null;
+}
+
+function sanitizeUrl(val: unknown, maxLen = 500): string {
+  if (typeof val !== 'string') return '';
+  const trimmed = val.trim().slice(0, maxLen);
+  if (!trimmed) return '';
+  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function sanitizeNullableUrl(val: unknown, maxLen = 500): string | null {
+  const cleaned = sanitizeUrl(val, maxLen);
+  return cleaned ? cleaned : null;
 }
 
 function sanitizeId(val: unknown): string {
@@ -70,27 +117,55 @@ function verifyEnvPasscode(entered: string, configured: string): boolean {
   }
 }
 
-function issueAdminToken(): string {
-  const token = crypto.randomBytes(32).toString('hex');
-  activeAdminTokens.set(token, Date.now() + TOKEN_TTL_MS);
-  return token;
+function createSignedAdminToken(signingKey: string): string {
+  const expiresAt = Date.now() + TOKEN_TTL_MS;
+  const payload = `admin.${expiresAt}`;
+  const sig = crypto.createHmac('sha256', signingKey).update(payload).digest('hex');
+  return `${expiresAt}.${sig}`;
 }
 
-function isValidAdminToken(authHeader: string | undefined): boolean {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
+function verifySignedAdminToken(authHeader: string | undefined, signingKey: string | null): boolean {
+  if (!authHeader || !authHeader.startsWith('Bearer ') || !signingKey) return false;
   const token = authHeader.slice(7).trim();
-  if (!token) return false;
-  const expiry = activeAdminTokens.get(token);
-  if (!expiry) return false;
-  if (Date.now() > expiry) {
-    activeAdminTokens.delete(token);
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+  const [expiresAtStr, sigHex] = parts;
+  const expiresAt = Number(expiresAtStr);
+  if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return false;
+
+  const payload = `admin.${expiresAt}`;
+  const expectedSig = crypto.createHmac('sha256', signingKey).update(payload).digest('hex');
+  try {
+    const a = Buffer.from(sigHex, 'hex');
+    const b = Buffer.from(expectedSig, 'hex');
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
     return false;
   }
-  return true;
 }
 
-function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
-  if (!isValidAdminToken(req.headers.authorization)) {
+async function resolveSigningKey(): Promise<string | null> {
+  const envPass = (process.env.ADMIN_PASSCODE || '').trim();
+  if (envPass) {
+    return crypto.createHash('sha256').update(`env:${envPass}`).digest('hex');
+  }
+  const db = await getDb();
+  if (db) {
+    const doc = await db.collection('meta').findOne({ _id: 'admin_auth' as unknown as any });
+    if (doc && typeof doc.hash === 'string' && doc.hash) {
+      return doc.hash;
+    }
+  }
+  if (fallbackAdminAuth) {
+    return fallbackAdminAuth.hash;
+  }
+  return null;
+}
+
+async function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
+  const signingKey = await resolveSigningKey();
+  if (!verifySignedAdminToken(req.headers.authorization, signingKey)) {
     res.status(401).json({ error: 'Unauthorized. Valid Admin session required.' });
     return;
   }
@@ -136,9 +211,9 @@ async function ensureSeeded(db: Db): Promise<void> {
     });
     if (mortgages.length > 0) {
       await mCol.insertMany(mortgages, { ordered: false }).catch(() => {});
-      await mCol.createIndex({ recordId: 1 }, { unique: true }).catch(() => {});
     }
   }
+  await mCol.createIndex({ recordId: 1 }, { unique: true }).catch(() => {});
 
   const pCol = db.collection('permits');
   if ((await pCol.countDocuments()) === 0) {
@@ -149,9 +224,9 @@ async function ensureSeeded(db: Db): Promise<void> {
     });
     if (permits.length > 0) {
       await pCol.insertMany(permits, { ordered: false }).catch(() => {});
-      await pCol.createIndex({ recordId: 1 }, { unique: true }).catch(() => {});
     }
   }
+  await pCol.createIndex({ recordId: 1 }, { unique: true }).catch(() => {});
 
   const cCol = db.collection('carriers');
   if ((await cCol.countDocuments()) === 0) {
@@ -162,9 +237,9 @@ async function ensureSeeded(db: Db): Promise<void> {
     }));
     if (carriers.length > 0) {
       await cCol.insertMany(carriers, { ordered: false }).catch(() => {});
-      await cCol.createIndex({ id: 1 }, { unique: true }).catch(() => {});
     }
   }
+  await cCol.createIndex({ id: 1 }, { unique: true }).catch(() => {});
 }
 
 function sanitizeMortgageInput(body: Record<string, unknown>, id: string): MortgageRecord & { recordId: string } {
@@ -181,7 +256,7 @@ function sanitizeMortgageInput(body: Record<string, unknown>, id: string): Mortg
     Telephone2: sanitizeNullableString(body.Telephone2, 60),
     FAX: sanitizeNullableString(body.FAX, 60),
     email: sanitizeNullableString(body.email, 200),
-    Online: sanitizeNullableString(body.Online, 500),
+    Online: sanitizeNullableUrl(body.Online, 500),
     Notes: sanitizeNullableString(body.Notes, 2000),
     LastUpdated: sanitizeString(body.LastUpdated, 40) || formatCurrentTimestamp()
   };
@@ -196,12 +271,12 @@ function sanitizePermitInput(body: Record<string, unknown>, id: string): Florida
     City: sanitizeString(body.City, 120),
     County: sanitizeString(body.County, 120).toUpperCase(),
     State: sanitizeString(body.State || 'FL', 20).toUpperCase(),
-    PAlink: sanitizeNullableString(body.PAlink, 500),
-    PermitByCounty: sanitizeNullableString(body.PermitByCounty, 500),
-    PermitByCity: sanitizeNullableString(body.PermitByCity, 500),
+    PAlink: sanitizeNullableUrl(body.PAlink, 500),
+    PermitByCounty: sanitizeNullableUrl(body.PermitByCounty, 500),
+    PermitByCity: sanitizeNullableUrl(body.PermitByCity, 500),
     Terrain: sanitizeString(body.Terrain, 10) || undefined,
-    lat: typeof body.lat === 'number' ? body.lat : undefined,
-    long: typeof body.long === 'number' ? body.long : undefined,
+    lat: typeof body.lat === 'number' && Number.isFinite(body.lat) ? body.lat : undefined,
+    long: typeof body.long === 'number' && Number.isFinite(body.long) ? body.long : undefined,
     LastUpdated: sanitizeString(body.LastUpdated, 40) || formatCurrentTimestamp()
   };
 }
@@ -211,10 +286,10 @@ function sanitizeCarrierInput(body: Record<string, unknown>, id: string): Carrie
     id,
     recordId: id,
     Carrier: sanitizeString(body.Carrier, 250),
-    AgentPortalLogin: sanitizeString(body.AgentPortalLogin, 500),
+    AgentPortalLogin: sanitizeUrl(body.AgentPortalLogin, 500),
     ForAgents: sanitizeString(body.ForAgents, 100),
-    Payments: sanitizeString(body.Payments, 500),
-    PublicWebsite: sanitizeString(body.PublicWebsite, 500),
+    Payments: sanitizeUrl(body.Payments, 500),
+    PublicWebsite: sanitizeUrl(body.PublicWebsite, 500),
     OtherNames: sanitizeString(body.OtherNames, 300),
     ClaimsPhone: sanitizeString(body.ClaimsPhone, 100),
     ClaimsEmail: sanitizeString(body.ClaimsEmail, 200),
@@ -238,6 +313,14 @@ async function startServer() {
   const app = express();
   app.use(express.json({ limit: '15mb' }));
 
+  // Baseline security headers for all API endpoints
+  app.use('/api', (_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    next();
+  });
+
   // --- 1. Admin Auth Status, First-Run Claim Setup & Login ---
   app.get('/api/auth/status', async (_req: Request, res: Response) => {
     const envPass = (process.env.ADMIN_PASSCODE || '').trim();
@@ -256,6 +339,12 @@ async function startServer() {
   });
 
   app.post('/api/auth/setup', async (req: Request, res: Response) => {
+    const clientIp = getClientIp(req);
+    if (isRateLimited(clientIp)) {
+      res.status(429).json({ error: 'Too many authentication attempts. Please wait 60 seconds and try again.' });
+      return;
+    }
+
     const envPass = (process.env.ADMIN_PASSCODE || '').trim();
     if (envPass) {
       res.status(403).json({ error: 'Admin passcode is already configured via environment secret.' });
@@ -293,11 +382,18 @@ async function startServer() {
       fallbackAdminAuth = { salt, hash };
     }
 
-    const token = issueAdminToken();
+    clearFailedAttempts(clientIp);
+    const token = createSignedAdminToken(hash);
     res.json({ token, configured: true });
   });
 
   app.post('/api/auth/login', async (req: Request, res: Response) => {
+    const clientIp = getClientIp(req);
+    if (isRateLimited(clientIp)) {
+      res.status(429).json({ error: 'Too many failed login attempts. Please wait 60 seconds and try again.' });
+      return;
+    }
+
     const passcode = sanitizeString(req.body?.passcode, 128);
     if (!passcode) {
       res.status(400).json({ error: 'Passcode is required.' });
@@ -306,36 +402,37 @@ async function startServer() {
 
     const envPass = (process.env.ADMIN_PASSCODE || '').trim();
     let isValid = false;
+    let signingKey: string | null = null;
 
     if (envPass) {
       isValid = verifyEnvPasscode(passcode, envPass);
+      signingKey = crypto.createHash('sha256').update(`env:${envPass}`).digest('hex');
     } else {
       const db = await getDb();
       if (db) {
         const doc = await db.collection('meta').findOne({ _id: 'admin_auth' as unknown as any });
         if (doc && typeof doc.salt === 'string' && typeof doc.hash === 'string') {
           isValid = verifyPasswordScrypt(passcode, doc.salt, doc.hash);
+          signingKey = doc.hash;
         }
       } else if (fallbackAdminAuth) {
         isValid = verifyPasswordScrypt(passcode, fallbackAdminAuth.salt, fallbackAdminAuth.hash);
+        signingKey = fallbackAdminAuth.hash;
       }
     }
 
-    if (!isValid) {
+    if (!isValid || !signingKey) {
+      recordFailedAttempt(clientIp);
       res.status(401).json({ error: 'Invalid admin passcode. Please check credentials and try again.' });
       return;
     }
 
-    const token = issueAdminToken();
+    clearFailedAttempts(clientIp);
+    const token = createSignedAdminToken(signingKey);
     res.json({ token });
   });
 
-  app.post('/api/auth/logout', (req: Request, res: Response) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.slice(7).trim();
-      activeAdminTokens.delete(token);
-    }
+  app.post('/api/auth/logout', (_req: Request, res: Response) => {
     res.json({ ok: true });
   });
 
@@ -343,6 +440,19 @@ async function startServer() {
   app.get('/api/records', async (_req: Request, res: Response) => {
     const db = await getDb();
     if (!db) {
+      // Fallback: pull live MongoDB records from the production Cloudflare Worker endpoint
+      try {
+        const remoteRes = await fetch('https://fl-insurebase.info-dir.workers.dev/api/records');
+        if (remoteRes.ok) {
+          const remoteData = await remoteRes.json();
+          if (remoteData && remoteData.source === 'mongodb') {
+            res.json(remoteData);
+            return;
+          }
+        }
+      } catch {
+        // ignore fallback error
+      }
       res.json({
         source: 'static',
         dbConnected: false,
@@ -389,7 +499,50 @@ async function startServer() {
     }
   });
 
-  // --- 3. Protected Mortgagee CRUD Routes ---
+  // --- 3. Protected Mortgagee CRUD & Batch Import Routes ---
+  app.post('/api/mortgages/batch', requireAdminAuth, async (req: Request, res: Response) => {
+    const db = await getDb();
+    if (!db) {
+      res.status(503).json({ error: 'MongoDB is not connected.' });
+      return;
+    }
+    const rawRecords = Array.isArray(req.body?.records) ? req.body.records : [];
+    const mode = req.body?.mode === 'replace' ? 'replace' : 'merge';
+    if (rawRecords.length === 0) {
+      res.status(400).json({ error: 'No records provided for batch sync.' });
+      return;
+    }
+
+    const bulkOps: any[] = [];
+    const incomingIds: string[] = [];
+
+    for (const item of rawRecords) {
+      if (!item || typeof item !== 'object') continue;
+      const rawId = item.recordId || (item._id && item._id.$oid) || item._id || item.id;
+      const id = sanitizeId(String(rawId || '')) || crypto.randomBytes(12).toString('hex');
+      const clean = sanitizeMortgageInput(item, id);
+      if (!clean.Name) continue;
+      const { _id, ...docFields } = clean;
+      incomingIds.push(id);
+      bulkOps.push({
+        updateOne: {
+          filter: { recordId: id },
+          update: { $set: { ...docFields, recordId: id } },
+          upsert: true
+        }
+      });
+    }
+
+    if (mode === 'replace' && incomingIds.length > 0) {
+      await db.collection('mortgages').deleteMany({ recordId: { $nin: incomingIds } });
+    }
+    if (bulkOps.length > 0) {
+      await db.collection('mortgages').bulkWrite(bulkOps, { ordered: false });
+    }
+
+    res.json({ ok: true, count: bulkOps.length });
+  });
+
   app.post('/api/mortgages', requireAdminAuth, async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) {
@@ -443,7 +596,50 @@ async function startServer() {
     res.json({ ok: true });
   });
 
-  // --- 4. Protected FL Property / Permits CRUD & Bulk Update Routes ---
+  // --- 4. Protected FL Property / Permits CRUD, Batch & Bulk Update Routes ---
+  app.post('/api/permits/batch', requireAdminAuth, async (req: Request, res: Response) => {
+    const db = await getDb();
+    if (!db) {
+      res.status(503).json({ error: 'MongoDB is not connected.' });
+      return;
+    }
+    const rawRecords = Array.isArray(req.body?.records) ? req.body.records : [];
+    const mode = req.body?.mode === 'replace' ? 'replace' : 'merge';
+    if (rawRecords.length === 0) {
+      res.status(400).json({ error: 'No permit records provided for batch sync.' });
+      return;
+    }
+
+    const bulkOps: any[] = [];
+    const incomingIds: string[] = [];
+
+    for (const item of rawRecords) {
+      if (!item || typeof item !== 'object') continue;
+      const rawId = item.recordId || (item._id && item._id.$oid) || item._id || item.id;
+      const id = sanitizeId(String(rawId || '')) || crypto.randomBytes(12).toString('hex');
+      const clean = sanitizePermitInput(item, id);
+      if (!clean.zip && !clean.City) continue;
+      const { _id, ...docFields } = clean;
+      incomingIds.push(id);
+      bulkOps.push({
+        updateOne: {
+          filter: { recordId: id },
+          update: { $set: { ...docFields, recordId: id } },
+          upsert: true
+        }
+      });
+    }
+
+    if (mode === 'replace' && incomingIds.length > 0) {
+      await db.collection('permits').deleteMany({ recordId: { $nin: incomingIds } });
+    }
+    if (bulkOps.length > 0) {
+      await db.collection('permits').bulkWrite(bulkOps, { ordered: false });
+    }
+
+    res.json({ ok: true, count: bulkOps.length });
+  });
+
   app.post('/api/permits', requireAdminAuth, async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) {
@@ -546,19 +742,19 @@ async function startServer() {
 
       const updates: Record<string, any> = {};
       if (options.updatePaLink) {
-        const val = sanitizeNullableString(options.newPaLink, 500);
+        const val = sanitizeNullableUrl(options.newPaLink, 500);
         if (!options.onlyIfEmpty || !rec.PAlink) {
           updates.PAlink = val;
         }
       }
       if (options.updateCountyPermitLink) {
-        const val = sanitizeNullableString(options.newCountyPermitLink, 500);
+        const val = sanitizeNullableUrl(options.newCountyPermitLink, 500);
         if (!options.onlyIfEmpty || !rec.PermitByCounty) {
           updates.PermitByCounty = val;
         }
       }
       if (options.updateCityPermitLink) {
-        const val = sanitizeNullableString(options.newCityPermitLink, 500);
+        const val = sanitizeNullableUrl(options.newCityPermitLink, 500);
         if (!options.onlyIfEmpty || !rec.PermitByCity) {
           updates.PermitByCity = val;
         }
